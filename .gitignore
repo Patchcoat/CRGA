@@ -14,10 +14,12 @@ CTestTestfile.cmake
 *.cmake
 *.sln
 _deps
+build
 
 # vscode
 .vscode
 launch.json
+tasks.json
 
 # C
 crga
