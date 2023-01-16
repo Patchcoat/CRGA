@@ -19,7 +19,7 @@
 
 int main() {
     CRInitWindow();
-    CRLoadFont("");
+    //CRLoadFont("");
     CRLoop();
     CRClose();
     return 0;
