@@ -3,7 +3,7 @@
  *
  *       Filename:  main.c
  *
- *    Description: The Main file for the Classic Rogelike Graphics API 
+ *    Description: The Main file for the Classic Rogelike Graphics API. Used for testing. 
  *
  *        Version:  1.0
  *        Created:  01/14/2023 06:41:04 PM
@@ -15,10 +15,12 @@
  *
  * =====================================================================================
  */
-#include <raylib.h>
-#include <stdlib.h>
+#include "crga.h"
 
 int main() {
-
-    return 1;
+    CRInitWindow();
+    CRLoadFont("");
+    CRLoop();
+    CRClose();
+    return 0;
 }

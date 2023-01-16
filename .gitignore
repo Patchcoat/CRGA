@@ -15,6 +15,7 @@ CTestTestfile.cmake
 *.sln
 _deps
 build
+.cache
 
 # vscode
 .vscode
