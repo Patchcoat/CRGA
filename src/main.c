@@ -19,7 +19,7 @@
 
 int main() {
     CRInitWindow();
-    //CRLoadFont("");
+    CRLoadFont("resources/dejavu-sans.book.ttf");
     CRLoop();
     CRClose();
     return 0;

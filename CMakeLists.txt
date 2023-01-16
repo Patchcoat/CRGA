@@ -23,11 +23,11 @@ if (NOT raylib_FOUND) # If there's none, fetch and build raylib
 endif()
 
 # Our Project
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
 set(SOURCES src/main.c src/crga.c src/crga.h)
 add_executable(${PROJECT_NAME} ${SOURCES})
 #set(raylib_VERBOSE 1)
 target_link_libraries(${PROJECT_NAME} raylib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY build)
 
 # Checks if OSX and links appropriate frameworks (Only required on MacOS)
 if (APPLE)

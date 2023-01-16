@@ -26,8 +26,7 @@ struct CRFonts {
 void CRInitWindow() {
     CRInitWindowSizeTitleFPS(800, 450, "CRGA Basic Window", 60);
 }
-void CRInitWindowTitle(const char *title) {
-    CRInitWindowSizeTitleFPS(800, 450, title, 60);
+void CRInitWindowTitle(const char *title) { CRInitWindowSizeTitleFPS(800, 450, title, 60);
 }
 void CRInitWindowSize(const int screenWidth, const int screenHeight) {
     CRInitWindowSizeTitleFPS(screenWidth, screenHeight, "CRGA Basic Window", 60);
@@ -59,11 +58,14 @@ inline void CRUnloadFonts() {
 
 // Drawing Loop
 void CRLoop() {
+    Vector2 fontPosition = {40.0f, 225.0f};
     while (!WindowShouldClose())
     {
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
+
+            DrawTextEx(cr_fonts.fonts[0], "Hello World!", fontPosition, 24, 0, BLACK);
 
         EndDrawing();
     }
@@ -71,7 +73,7 @@ void CRLoop() {
 
 // Font Rendering
 inline void CRLoadFont(const char *font_path) {
-    CRLoadFontSize(font_path, 24);
+    CRLoadFontSize(font_path, 96);
 }
 
 void CRLoadFontSize(const char *font_path, int size) {
