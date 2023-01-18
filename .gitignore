@@ -20,6 +20,10 @@ _deps
 .vscode
 launch.json
 tasks.json
+*.recipe
+*.log
+*.tlog
+*.lastbuildstate
 
 # C
 crga
