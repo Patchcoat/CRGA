@@ -20,7 +20,13 @@
 struct CRFonts {
     Font *fonts;
     unsigned char count;
-} cr_fonts = {0,0};
+} cr_fonts = {0, 0};
+
+struct CRGrid {
+    short *grid;
+    int width;
+    int height;
+} cr_grid = {0, 0, 0};
 
 // Window Functions
 void CRInitWindow() {
@@ -37,8 +43,7 @@ void CRInitWindowSizeTitle(const int screenWidth, const int screenHeight, const 
 void CRInitWindowSizeFPS(const int screenWidth, const int screenHeight, const int fps) {
     CRInitWindowSizeTitleFPS(screenWidth, screenHeight, "CRGA Basic Window", fps);
 }
-void CRInitWindowSizeTitleFPS(const int screenWidth, const int screenHeight,
-        const char *title, const int fps) {
+void CRInitWindowSizeTitleFPS(const int screenWidth, const int screenHeight, const char *title, const int fps) {
     InitWindow(screenWidth, screenHeight, title);
 
     SetTargetFPS(fps);
@@ -58,14 +63,13 @@ inline void CRUnloadFonts() {
 
 // Drawing Loop
 void CRLoop() {
-    Vector2 fontPosition = {40.0f, 225.0f};
     while (!WindowShouldClose())
     {
         BeginDrawing();
 
-            ClearBackground(RAYWHITE);
+            ClearBackground(BLACK);
 
-            DrawTextEx(cr_fonts.fonts[0], "Hello World!", fontPosition, 24, 0, BLACK);
+            CRDrawTiles();
 
         EndDrawing();
     }
@@ -92,4 +96,45 @@ void CRLoadFontSize(const char *font_path, int size) {
 
     GenTextureMipmaps(&cr_fonts.fonts[index].texture);
     SetTextureFilter(cr_fonts.fonts[index].texture, TEXTURE_FILTER_POINT);
+}
+
+// Tile Rendering
+char IndexToChar(short index) {
+    char charList[] = {'\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0',' ','!','"','#','$','%','&','\'','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','<','=','>','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_','`','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~','\0'};
+    return charList[index];
+}
+void CRInitTiles(short *grid, short value, int height, int width){
+    for (int i = 0; i < height * width; i++) {
+        grid[i] = value;
+    }
+}
+void CRSetTiles(short *grid, int width, int height) {
+    cr_grid.grid = grid;
+    cr_grid.width = width;
+    cr_grid.height = height;
+}
+void CRDrawTiles() {
+    float size = 20.0f;
+    for (int row = 0; row < cr_grid.height; row++) {
+        for (int col = 0; col < cr_grid.width; col++) {
+            short index = cr_grid.grid[col * cr_grid.width + row];
+            if (index == 0)
+                continue;
+            float x_pos = size * row;
+            float y_pos = size * col;
+            DrawRectangle(x_pos, y_pos, size, size, BLACK);
+#if GRID_OUTLINE
+            DrawRectangleLines(x_pos, y_pos, size, size, RED);
+#endif
+            char character[2] = {IndexToChar(index),'\0'};
+            Vector2 position = {x_pos, y_pos};
+            if (cr_fonts.count > 0) {
+                position.x += size/2.0f - MeasureTextEx(cr_fonts.fonts[0], character, 24, 0).x/2.0f;
+                DrawTextEx(cr_fonts.fonts[0], character, position, 24, 0, WHITE);
+            } else {
+                position.x += size/2.0f - MeasureText(character, 24)/2.0f;
+                DrawText(character, position.x, position.y, 24, WHITE);
+            }
+        }
+    }
 }

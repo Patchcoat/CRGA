@@ -21,6 +21,9 @@
 
 #include <raylib.h>
 #include <stdlib.h>
+#include <stdio.h>
+
+#define GRID_OUTLINE 0
 
 // Window Functions
 void CRInitWindow();
@@ -41,5 +44,10 @@ void CRLoop();
 // Font Rendering
 void CRLoadFont(const char *font_path);
 void CRLoadFontSize(const char *font_path, int size);
+
+// Tile Rendering
+void CRInitTiles(short *grid, short value, int height, int width);
+void CRSetTiles(short *grid, int width, int height);
+void CRDrawTiles();
 
 #endif
