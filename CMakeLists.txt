@@ -24,7 +24,7 @@ endif()
 
 # Our Project
 if (UNIX)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/DEBUG)
 endif()
 set(SOURCES src/main.c src/crga.c src/crga.h)
 add_executable(${PROJECT_NAME} ${SOURCES})
