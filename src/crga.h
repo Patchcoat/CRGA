@@ -55,7 +55,8 @@ typedef struct {
 
 // Init
 void CRInit();
-void CRInitConfig();
+void CRInitConfig(CRConfig *config);
+void CRSetConfig(CRConfig *config);
 void CRInitWindow();
 
 // Cleanup Functions
@@ -76,7 +77,6 @@ void CRNewWorldLayer(short *grid, int width, int height, Vector2 position);
 void CRNewUILayer(short *grid, int width, int height, Vector2 position);
 
 // Tile Rendering
-void CRFillTiles(short *grid, short value, int height, int width);
 void CRSetWorldTiles(short *grid, int width, int height);
 void CRSetUITiles(short *grid, int width, int height);
 int CRSetTilesOnWorldLayer(short *grid, int layer, int width, int height);

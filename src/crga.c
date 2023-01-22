@@ -21,31 +21,36 @@ CRConfig *cr_config;
 
 // Init
 void CRInit() {
-    CRInitConfig();
+    CRConfig *config = (CRConfig *) malloc(sizeof(CRConfig));
+    CRInitConfig(config);
     CRInitWindow();
 }
-void CRInitConfig() {
-    cr_config->window_width = 800;
-    cr_config->window_height = 450;
-    cr_config->fps = 60;
-    cr_config->title = "CRGA Basic Window";
+void CRInitConfig(CRConfig *config) {
+    config->window_width = 800;
+    config->window_height = 450;
+    config->fps = 60;
+    config->title = "CRGA Basic Window";
 
-    cr_config->world_layers = 0;
-    cr_config->world_layer_count = 0;
-    cr_config->ui_layers = 0;
-    cr_config->ui_layer_count = 0;
+    config->world_layers = 0;
+    config->world_layer_count = 0;
+    config->ui_layers = 0;
+    config->ui_layer_count = 0;
 
-    cr_config->main_camera.target = (Vector2){0.0f, 0.0f};
-    cr_config->main_camera.offset = (Vector2){0.0f, 0.0f};
-    cr_config->main_camera.rotation = 0.0f;
-    cr_config->main_camera.zoom = 1.0f;
+    config->main_camera.target = (Vector2){0.0f, 0.0f};
+    config->main_camera.offset = (Vector2){0.0f, 0.0f};
+    config->main_camera.rotation = 0.0f;
+    config->main_camera.zoom = 1.0f;
 
-    cr_config->tile_size = 20.0f;
+    config->tile_size = 20.0f;
 
-    cr_config->fonts = 0;
-    cr_config->font_count = 0;
+    config->fonts = 0;
+    config->font_count = 0;
 
-    cr_config->pre_draw_function = 0; // if this isn't 0 then it's called
+    config->pre_draw_function = 0; // if this isn't 0 then it's called
+    CRSetConfig(config);
+}
+inline void CRSetConfig(CRConfig *config) {
+    cr_config = config;
 }
 inline void CRInitWindow() {
     InitWindow(cr_config->window_width, cr_config->window_height, cr_config->title);
@@ -156,10 +161,10 @@ char IndexToChar(short index) {
     char charList[] = {'\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0',' ','!','"','#','$','%','&','\'','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','<','=','>','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_','`','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~','\0'};
     return charList[index];
 }
-void CRFillTiles(short *tiles, short value, int height, int width){
-    for (int i = 0; i < height * width; i++) {
-        tiles[i] = value;
-    }
+void SetTiles(CRLayer *layer, short *tiles, int width, int height) {
+    layer->tiles = tiles;
+    layer->width = width;
+    layer->height = height;
 }
 void CRSetWorldTiles(short *tiles, int width, int height) {
     if (cr_config->world_layer_count == 0) {
@@ -186,11 +191,6 @@ int CRSetTilesOnUILayer(short *tiles, int layer, int width, int height) {
         return 1;
     SetTiles(cr_config->ui_layers + layer, tiles, width, height);
     return 0;
-}
-void SetTiles(CRLayer *layer, short *tiles, int width, int height) {
-    layer->tiles = tiles;
-    layer->width = width;
-    layer->height = height;
 }
 void CRDrawLayer(CRLayer *layer) {
     float tile_size = cr_config->tile_size;

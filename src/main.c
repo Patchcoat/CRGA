@@ -16,6 +16,7 @@
  * =====================================================================================
  */
 #include "crga.h"
+#include <stdio.h>
 
 #define GRIDHEIGHT 10
 #define GRIDWIDTH 10
@@ -43,16 +44,17 @@ void pre_draw() {
 }
 
 int main() {
+    printf("hello\n");
     CRInit();
 
     //CRLoadFont("resources/dejavu-sans.book.ttf");
-    short grid[GRIDHEIGHT * GRIDWIDTH];
-    CRFillTiles(grid, '\0', GRIDHEIGHT, GRIDWIDTH);
+    short grid[GRIDHEIGHT * GRIDWIDTH] = {0};
+    printf("hello\n");
     CRSetWorldTiles(grid, GRIDHEIGHT, GRIDWIDTH);
     grid[0] = 'A';
     grid[1] = 'b';
     grid[GRIDWIDTH] = 'B';
-
+    printf("hello\n");
     CRSetPredrawFunction(pre_draw);
     CRLoop();
 
