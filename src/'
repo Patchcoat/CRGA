@@ -29,7 +29,6 @@ typedef struct {
     int width;
     int height;
     Vector2 position;
-    int font;
 } CRLayer;
 
 typedef struct {
@@ -71,19 +70,11 @@ void CRLoop();
 void CRLoadFont(const char *font_path);
 void CRLoadFontSize(const char *font_path, int size);
 
-// Layers
-void CRNewWorldLayer(short *grid, int width, int height, Vector2 position);
-void CRNewUILayer(short *grid, int width, int height, Vector2 position);
-
 // Tile Rendering
 void CRFillTiles(short *grid, short value, int height, int width);
-void CRSetWorldTiles(short *grid, int width, int height);
-void CRSetUITiles(short *grid, int width, int height);
-int CRSetTilesOnWorldLayer(short *grid, int layer, int width, int height);
-int CRSetTilesOnUILayer(short *grid, int layer, int width, int height);
-void SetTiles(CRLayer *layer, short *tiles, int width, int height);
-void CRDrawLayer(CRLayer *layer);
-void CRDraw();
+void CRSetTiles(short *grid, int width, int height);
+void CRSetTilesOnLayer(short *grid, int layer, int width, int height);
+void CRDrawTiles();
 
 // Camera functions
 Camera2D *CRGetMainCamera();

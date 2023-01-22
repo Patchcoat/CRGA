@@ -17,85 +17,138 @@
  */
 #include "crga.h"
 
-struct CRFonts {
-    Font *fonts;
-    unsigned char count;
-} cr_fonts = {0, 0};
+CRConfig *cr_config;
 
-struct CRGrid {
-    short *grid;
-    int width;
-    int height;
-} cr_grid = {0, 0, 0};
+// Init
+void CRInit() {
+    CRInitConfig();
+    CRInitWindow();
+}
+void CRInitConfig() {
+    cr_config->window_width = 800;
+    cr_config->window_height = 450;
+    cr_config->fps = 60;
+    cr_config->title = "CRGA Basic Window";
 
-// Window Functions
-void CRInitWindow() {
-    CRInitWindowSizeTitleFPS(800, 450, "CRGA Basic Window", 60);
-}
-void CRInitWindowTitle(const char *title) { CRInitWindowSizeTitleFPS(800, 450, title, 60);
-}
-void CRInitWindowSize(const int screenWidth, const int screenHeight) {
-    CRInitWindowSizeTitleFPS(screenWidth, screenHeight, "CRGA Basic Window", 60);
-}
-void CRInitWindowSizeTitle(const int screenWidth, const int screenHeight, const char *title) {
-    CRInitWindowSizeTitleFPS(screenWidth, screenHeight, title, 60);
-}
-void CRInitWindowSizeFPS(const int screenWidth, const int screenHeight, const int fps) {
-    CRInitWindowSizeTitleFPS(screenWidth, screenHeight, "CRGA Basic Window", fps);
-}
-void CRInitWindowSizeTitleFPS(const int screenWidth, const int screenHeight, const char *title, const int fps) {
-    InitWindow(screenWidth, screenHeight, title);
+    cr_config->world_layers = 0;
+    cr_config->world_layer_count = 0;
+    cr_config->ui_layers = 0;
+    cr_config->ui_layer_count = 0;
 
-    SetTargetFPS(fps);
+    cr_config->main_camera.target = (Vector2){0.0f, 0.0f};
+    cr_config->main_camera.offset = (Vector2){0.0f, 0.0f};
+    cr_config->main_camera.rotation = 0.0f;
+    cr_config->main_camera.zoom = 1.0f;
+
+    cr_config->tile_size = 20.0f;
+
+    cr_config->fonts = 0;
+    cr_config->font_count = 0;
+
+    cr_config->pre_draw_function = 0; // if this isn't 0 then it's called
+}
+inline void CRInitWindow() {
+    InitWindow(cr_config->window_width, cr_config->window_height, cr_config->title);
+    SetTargetFPS(cr_config->fps);
 }
 
 // Cleanup Functions
 void CRClose() {
     CRUnloadFonts();
+    CRUnloadLayers();
     CloseWindow();
 }
-inline void CRUnloadFonts() {
-    for (int i = cr_fonts.count-1; i >= 0; i--) {
-        UnloadFont(cr_fonts.fonts[i]);
+void CRUnloadLayers() {
+    if (cr_config->world_layer_count > 0) {
+        free(cr_config->world_layers);
     }
-    free(cr_fonts.fonts);
+    if (cr_config->ui_layer_count > 0) {
+        free(cr_config->ui_layers);
+    }
+}
+inline void CRUnloadFonts() {
+    for (int i = cr_config->font_count-1; i >= 0; i--) {
+        UnloadFont(cr_config->fonts[i]);
+    }
+    free(cr_config->fonts);
 }
 
 // Drawing Loop
+void CRSetPredrawFunction(void (*pre_draw)()) {
+    cr_config->pre_draw_function = pre_draw;
+}
 void CRLoop() {
-    while (!WindowShouldClose())
-    {
+    while (!WindowShouldClose()) {
+
+        if (cr_config->pre_draw_function)
+            cr_config->pre_draw_function();
+
         BeginDrawing();
 
             ClearBackground(BLACK);
 
-            CRDrawTiles();
+            BeginMode2D(cr_config->main_camera);
+
+                CRDraw();
+
+            EndMode2D();
 
         EndDrawing();
     }
 }
 
-// Font Rendering
+// Font Loading
 inline void CRLoadFont(const char *font_path) {
     CRLoadFontSize(font_path, 96);
 }
-
-void CRLoadFontSize(const char *font_path, int size) {
-    if (cr_fonts.count == 255) {
+void CRLoadFontSize(const char *font_path, int size) { // hidden malloc
+    if (cr_config->font_count == 255) {
         // there are too many fonts, exit out
         return;
-    } else if (cr_fonts.count == 0) {
-        cr_fonts.fonts = (Font *) malloc(sizeof(Font));
+    } else if (cr_config->font_count == 0) {
+        cr_config->fonts = (Font *) malloc(sizeof(Font));
     } else {
-        cr_fonts.fonts = (Font *) realloc(cr_fonts.fonts, cr_fonts.count + 1);
+        cr_config->fonts = (Font *) realloc(cr_config->fonts, sizeof(Font) * (cr_config->font_count + 1));
     }
-    unsigned char index = cr_fonts.count;
-    cr_fonts.count += 1;
+    size_t index = cr_config->font_count;
+    cr_config->font_count++;
     
-    cr_fonts.fonts[index] = LoadFontEx(font_path, size, 0, 0);
+    cr_config->fonts[index] = LoadFontEx(font_path, size, 0, 0);
 
-    GenTextureMipmaps(&cr_fonts.fonts[index].texture);
-    SetTextureFilter(cr_fonts.fonts[index].texture, TEXTURE_FILTER_POINT);
+    GenTextureMipmaps(&cr_config->fonts[index].texture);
+    SetTextureFilter(cr_config->fonts[index].texture, TEXTURE_FILTER_POINT);
+}
+
+// Layers
+void CRNewWorldLayer(short *grid, int width, int height, Vector2 position) {
+    if (cr_config->world_layer_count == 0) {
+        cr_config->world_layers = (CRLayer *) malloc(sizeof(CRLayer));
+    } else {
+        cr_config->world_layers = (CRLayer *) realloc(cr_config->world_layers, 
+                sizeof(CRLayer) * (cr_config->world_layer_count + 1));
+    }
+    size_t index = cr_config->world_layer_count;
+    cr_config->world_layer_count++;
+
+    cr_config->world_layers[index].tiles = grid;
+    cr_config->world_layers[index].width = width;
+    cr_config->world_layers[index].height = height;
+    cr_config->world_layers[index].position = position;
+}
+void CRNewUILayer(short *grid, int width, int height, Vector2 position) {
+    if (cr_config->ui_layer_count == 0) {
+        cr_config->ui_layers = (CRLayer *) malloc(sizeof(CRLayer));
+    } else {
+        cr_config->ui_layers = (CRLayer *) realloc(cr_config->ui_layers, 
+                sizeof(CRLayer) * (cr_config->ui_layer_count + 1));
+    }
+    size_t index = cr_config->ui_layer_count;
+    cr_config->ui_layer_count++;
+
+    cr_config->ui_layers[index].tiles = grid;
+    cr_config->ui_layers[index].width = width;
+    cr_config->ui_layers[index].height = height;
+    cr_config->ui_layers[index].position = position;
 }
 
 // Tile Rendering
@@ -103,38 +156,95 @@ char IndexToChar(short index) {
     char charList[] = {'\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0',' ','!','"','#','$','%','&','\'','(',')','*','+',',','-','.','/','0','1','2','3','4','5','6','7','8','9',':',';','<','=','>','?','@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_','`','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','{','|','}','~','\0'};
     return charList[index];
 }
-void CRInitTiles(short *grid, short value, int height, int width){
+void CRFillTiles(short *tiles, short value, int height, int width){
     for (int i = 0; i < height * width; i++) {
-        grid[i] = value;
+        tiles[i] = value;
     }
 }
-void CRSetTiles(short *grid, int width, int height) {
-    cr_grid.grid = grid;
-    cr_grid.width = width;
-    cr_grid.height = height;
+void CRSetWorldTiles(short *tiles, int width, int height) {
+    if (cr_config->world_layer_count == 0) {
+        Vector2 position = {0.0f, 0.0f};
+        CRNewWorldLayer(tiles, width, height, position);
+    }
+    CRSetTilesOnWorldLayer(tiles, 0, width, height);
 }
-void CRDrawTiles() {
-    float size = 20.0f;
-    for (int row = 0; row < cr_grid.height; row++) {
-        for (int col = 0; col < cr_grid.width; col++) {
-            short index = cr_grid.grid[col * cr_grid.width + row];
+void CRSetUITiles(short *tiles, int width, int height) {
+    if (cr_config->ui_layer_count == 0) {
+        Vector2 position = {0.0f, 0.0f};
+        CRNewUILayer(tiles, width, height, position);
+    }
+    CRSetTilesOnUILayer(tiles, 0, width, height);
+}
+int CRSetTilesOnWorldLayer(short *tiles, int layer, int width, int height) {
+    if (layer >= cr_config->world_layer_count)
+        return 1;
+    SetTiles(cr_config->world_layers + layer, tiles, width, height);
+    return 0;
+}
+int CRSetTilesOnUILayer(short *tiles, int layer, int width, int height) {
+    if (layer >= cr_config->ui_layer_count)
+        return 1;
+    SetTiles(cr_config->ui_layers + layer, tiles, width, height);
+    return 0;
+}
+void SetTiles(CRLayer *layer, short *tiles, int width, int height) {
+    layer->tiles = tiles;
+    layer->width = width;
+    layer->height = height;
+}
+void CRDrawLayer(CRLayer *layer) {
+    float tile_size = cr_config->tile_size;
+    for (int row = 0; row < layer->height; row++) {
+        for (int col = 0; col < layer->width; col++) {
+            short index = layer->tiles[col * layer->width + row];
             if (index == 0)
                 continue;
-            float x_pos = size * row;
-            float y_pos = size * col;
-            DrawRectangle(x_pos, y_pos, size, size, BLACK);
+            float x_pos = tile_size * row;
+            float y_pos = tile_size * col;
+            DrawRectangle(x_pos, y_pos, tile_size, tile_size, BLACK);
 #if GRID_OUTLINE
-            DrawRectangleLines(x_pos, y_pos, size, size, RED);
+            DrawRectangleLines(x_pos, y_pos, tile_size, tile_size, RED);
 #endif
             char character[2] = {IndexToChar(index),'\0'};
             Vector2 position = {x_pos, y_pos};
-            if (cr_fonts.count > 0) {
-                position.x += size/2.0f - MeasureTextEx(cr_fonts.fonts[0], character, 24, 0).x/2.0f;
-                DrawTextEx(cr_fonts.fonts[0], character, position, 24, 0, WHITE);
+            if (cr_config->font_count > 0) {
+                position.x += tile_size/2.0f - MeasureTextEx(cr_config->fonts[0], character, 24, 0).x/2.0f;
+                DrawTextEx(cr_config->fonts[0], character, position, 24, 0, WHITE);
             } else {
-                position.x += size/2.0f - MeasureText(character, 24)/2.0f;
+                position.x += tile_size/2.0f - MeasureText(character, 24)/2.0f;
                 DrawText(character, position.x, position.y, 24, WHITE);
             }
         }
     }
+}
+void CRDraw() {
+    for (int i = 0; i < cr_config->world_layer_count; i++) {
+        CRDrawLayer(&cr_config->world_layers[i]);
+    }
+    for (int i = 0; i < cr_config->ui_layer_count; i++) {
+        CRDrawLayer(&cr_config->ui_layers[i]);
+    }
+}
+
+// Camera functions
+Camera2D *CRGetMainCamera() {
+    return &cr_config->main_camera;
+}
+void CRSetCameraTarget(Camera2D *camera, Vector2 target) {
+    Vector2 target_out = (Vector2) {target.x * cr_config->tile_size, target.y * cr_config->tile_size};
+    camera->target = target_out;
+}
+void CRSetCameraOffset(Camera2D *camera, Vector2 offset) {
+    Vector2 offset_out = (Vector2) {offset.x * cr_config->tile_size, offset.y * cr_config->tile_size};
+    camera->offset = offset_out;
+}
+void CRShiftCameraTarget(Camera2D *camera, Vector2 target) {
+    Vector2 target_out = (Vector2) {camera->target.x + target.x * cr_config->tile_size, 
+        camera->target.y + target.y * cr_config->tile_size};
+    camera->target = target_out;
+}
+void CRShiftCameraOffset(Camera2D *camera, Vector2 offset) {
+    Vector2 offset_out = (Vector2) {camera->offset.x + offset.x * cr_config->tile_size, 
+        camera->offset.y + offset.y * cr_config->tile_size};
+    camera->offset = offset_out;
 }

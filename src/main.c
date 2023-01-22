@@ -20,16 +20,42 @@
 #define GRIDHEIGHT 10
 #define GRIDWIDTH 10
 
+void pre_draw() {
+    Vector2 camera_position = (Vector2) {0, 0};
+    int change = 0;
+    if (IsKeyPressed(KEY_W)) {
+        change = 1;
+        camera_position.y -= 1;
+    } else if (IsKeyPressed(KEY_S)) {
+        change = 1;
+        camera_position.y += 1;
+    }
+    if (IsKeyPressed(KEY_A)) {
+        change = 1;
+        camera_position.x -= 1;
+    } else if (IsKeyPressed(KEY_D)) {
+        change = 1;
+        camera_position.x += 1;
+    }
+    if (change) {
+        CRShiftCameraOffset(CRGetMainCamera(), camera_position);
+    }
+}
+
 int main() {
-    CRInitWindow();
+    CRInit();
+
     //CRLoadFont("resources/dejavu-sans.book.ttf");
     short grid[GRIDHEIGHT * GRIDWIDTH];
-    CRInitTiles(grid, '\0', GRIDHEIGHT, GRIDWIDTH);
-    CRSetTiles(grid, GRIDHEIGHT, GRIDWIDTH);
+    CRFillTiles(grid, '\0', GRIDHEIGHT, GRIDWIDTH);
+    CRSetWorldTiles(grid, GRIDHEIGHT, GRIDWIDTH);
     grid[0] = 'A';
     grid[1] = 'b';
     grid[GRIDWIDTH] = 'B';
+
+    CRSetPredrawFunction(pre_draw);
     CRLoop();
+
     CRClose();
     return 0;
 }
