@@ -31,6 +31,15 @@ typedef struct {
     Vector2 position;
     int font;
 } CRLayer;
+typedef struct {
+    char *tiles;
+    int width;
+    int height;
+    Vector2 position;
+    int layer;// what layer the mask is on. -1, topmost layer
+    int layer_count;// how many layers the mash should affect. -1, mask all layers
+    char mask_up;// bool for whether to mask higher layers, default false
+} CRMask;
 
 typedef struct {
     int window_width;
@@ -47,10 +56,10 @@ typedef struct {
 
     float tile_size;
 
+    Color background_color;
+
     Font *fonts;
     size_t font_count;
-
-    void (*pre_draw_function)();
 } CRConfig;
 
 // Init
@@ -64,9 +73,12 @@ void CRClose();
 void CRUnloadLayers();
 void CRUnloadFonts();
 
-// Drawing Loop
-void CRSetPredrawFunction(void (*pre_draw)());
+// Loop
 void CRLoop();
+void CRWorldDraw() __attribute__((weak));
+void CRUIDraw() __attribute__((weak));
+void CRPreDraw() __attribute__((weak));
+void CRPostDraw() __attribute__((weak));
 
 // Font Loading
 void CRLoadFont(const char *font_path);

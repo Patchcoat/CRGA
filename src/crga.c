@@ -23,6 +23,7 @@ CRConfig *cr_config;
 void CRInit() {
     CRConfig *config = (CRConfig *) malloc(sizeof(CRConfig));
     CRInitConfig(config);
+    CRSetConfig(config);
     CRInitWindow();
 }
 void CRInitConfig(CRConfig *config) {
@@ -43,11 +44,10 @@ void CRInitConfig(CRConfig *config) {
 
     config->tile_size = 20.0f;
 
+    config->background_color = BLACK;
+
     config->fonts = 0;
     config->font_count = 0;
-
-    config->pre_draw_function = 0; // if this isn't 0 then it's called
-    CRSetConfig(config);
 }
 inline void CRSetConfig(CRConfig *config) {
     cr_config = config;
@@ -78,29 +78,41 @@ inline void CRUnloadFonts() {
     free(cr_config->fonts);
 }
 
-// Drawing Loop
-void CRSetPredrawFunction(void (*pre_draw)()) {
-    cr_config->pre_draw_function = pre_draw;
-}
+// Loop
 void CRLoop() {
     while (!WindowShouldClose()) {
 
-        if (cr_config->pre_draw_function)
-            cr_config->pre_draw_function();
+        CRPreDraw();
 
         BeginDrawing();
 
-            ClearBackground(BLACK);
+            ClearBackground(cr_config->background_color);
 
             BeginMode2D(cr_config->main_camera);
 
-                CRDraw();
+                CRWorldDraw();
 
             EndMode2D();
 
+            CRUIDraw();
+
         EndDrawing();
+
+        CRPostDraw();
     }
 }
+void CRWorldDraw() {
+    for (int i = 0; i < cr_config->world_layer_count; i++) {
+        CRDrawLayer(&cr_config->world_layers[i]);
+    }
+}
+void CRUIDraw() {
+    for (int i = 0; i < cr_config->ui_layer_count; i++) {
+        CRDrawLayer(&cr_config->ui_layers[i]);
+    }
+}
+void CRPreDraw() {}
+void CRPostDraw() {}
 
 // Font Loading
 inline void CRLoadFont(const char *font_path) {
@@ -215,14 +227,6 @@ void CRDrawLayer(CRLayer *layer) {
                 DrawText(character, position.x, position.y, 24, WHITE);
             }
         }
-    }
-}
-void CRDraw() {
-    for (int i = 0; i < cr_config->world_layer_count; i++) {
-        CRDrawLayer(&cr_config->world_layers[i]);
-    }
-    for (int i = 0; i < cr_config->ui_layer_count; i++) {
-        CRDrawLayer(&cr_config->ui_layers[i]);
     }
 }
 
