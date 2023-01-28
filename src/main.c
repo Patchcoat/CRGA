@@ -21,25 +21,19 @@
 #define GRIDHEIGHT 10
 #define GRIDWIDTH 10
 
+CREntity *movable;
+
 void CRPreDraw() {
-    Vector2 camera_position = (Vector2) {0, 0};
     int change = 0;
     if (IsKeyPressed(KEY_W)) {
-        change = 1;
-        camera_position.y -= 1;
+        movable->position.y -= 1;
     } else if (IsKeyPressed(KEY_S)) {
-        change = 1;
-        camera_position.y += 1;
+        movable->position.y += 1;
     }
     if (IsKeyPressed(KEY_A)) {
-        change = 1;
-        camera_position.x -= 1;
+        movable->position.x -= 1;
     } else if (IsKeyPressed(KEY_D)) {
-        change = 1;
-        camera_position.x += 1;
-    }
-    if (change) {
-        CRShiftCameraOffset(CRGetMainCamera(), camera_position);
+        movable->position.x += 1;
     }
 }
 
@@ -47,11 +41,22 @@ int main() {
     CRInit();
 
     //CRLoadFont("resources/dejavu-sans.book.ttf");
-    short grid[GRIDHEIGHT * GRIDWIDTH] = {0};
-    grid[0] = 'A';
-    grid[1] = 'b';
-    grid[GRIDWIDTH] = 'B';
-    CRSetWorldTiles(grid, GRIDHEIGHT, GRIDWIDTH);
+    CRTile grid[GRIDHEIGHT * GRIDWIDTH] = {0};
+    CRSetWorldGrid(grid, GRIDHEIGHT, GRIDWIDTH);
+    CRSetWorldTile(CRCTile("A"), (Vector2) {0,0});
+    CRSetWorldTile(CRCTile("b"), (Vector2) {1,0});
+    CRSetWorldTile(CRCTile("B"), (Vector2) {0,1});
+
+    CRTile grid2[GRIDHEIGHT * GRIDWIDTH] = {0};
+    CRLayer layer = CRNewLayer(grid2, GRIDHEIGHT, GRIDWIDTH, (Vector2) {0,0});
+    CRSetTileOnLayer(&layer, CRCTile("C"), (Vector2){1, 1});
+    CRAddWorldLayer(1, layer);
+
+    CREntity player = CRNewEntity(CRCTile("@"), (Vector2) {0, 0});
+    player.tile.shift = (Vector2) {0, -3};
+    CRAddEntity(&player);
+    CRAddEntityToLayer(0, &player);
+    movable = &player;
 
     CRLoop();
 
