@@ -161,12 +161,20 @@ void CRSetUILayer(int index, CRLayer layer) {
         return;// TODO out of bounds error
     cr_config->ui_layers[index] = layer;
 }
-void NewLayer(CRLayer *layers, size_t count) {
+void NewWorldLayer() {
     if (cr_config->world_layer_count == 0) {
         cr_config->world_layers = (CRLayer *) malloc(sizeof(CRLayer));
     } else {
         cr_config->world_layers = (CRLayer *) realloc(cr_config->world_layers, 
                 sizeof(CRLayer) * (cr_config->world_layer_count + 1));
+    }
+}
+void NewUILayer() {
+    if (cr_config->ui_layer_count == 0) {
+        cr_config->ui_layers = (CRLayer *) malloc(sizeof(CRLayer));
+    } else {
+        cr_config->ui_layers = (CRLayer *) realloc(cr_config->ui_layers, 
+                sizeof(CRLayer) * (cr_config->ui_layer_count + 1));
     }
 }
 void CRAddWorldLayer(int index, CRLayer layer) {
@@ -175,7 +183,7 @@ void CRAddWorldLayer(int index, CRLayer layer) {
     if (index == cr_config->world_layer_count) {
         CRAppendWorldLayer(layer);
     }
-    NewLayer(cr_config->world_layers, cr_config->world_layer_count);
+    NewWorldLayer();
     for (int i = cr_config->world_layer_count - 1; i >= index; i--) {
         cr_config->world_layers[i+1] = cr_config->world_layers[i];
     }
@@ -187,20 +195,19 @@ void CRAddUILayer(int index, CRLayer layer) {
     if (index == cr_config->ui_layer_count) {
         CRAppendUILayer(layer);
     }
-    NewLayer(cr_config->ui_layers, cr_config->ui_layer_count);
+    NewUILayer();
     for (int i = cr_config->ui_layer_count - 1; i >= index; i--) {
         cr_config->ui_layers[i+1] = cr_config->ui_layers[i];
     }
     cr_config->ui_layer_count++;
 }
 void CRAppendWorldLayer(CRLayer layer) {
-    NewLayer(cr_config->world_layers, cr_config->world_layer_count);
+    NewWorldLayer();
     cr_config->world_layers[cr_config->world_layer_count] = layer;
     cr_config->world_layer_count++;
-
 }
 void CRAppendUILayer(CRLayer layer) {
-    NewLayer(cr_config->ui_layers, cr_config->ui_layer_count);
+    NewUILayer();
     cr_config->ui_layers[cr_config->ui_layer_count] = layer;
     cr_config->ui_layer_count++;
 }
