@@ -128,8 +128,8 @@ void CRLoadFontSize(const char *font_path, int size);// malloc, realloc
 CRLayer CRNewLayer(CRTile *grid, int width, int height, Vector2 position);
 void CRSetWorldLayer(int index, CRLayer layer);
 void CRSetUILayer(int index, CRLayer layer);
-void CRAddWorldLayer(int index, CRLayer layer);
-void CRAddUILayer(int index, CRLayer layer);
+void CRAddWorldLayer(int index, CRLayer layer);// malloc, realloc
+void CRAddUILayer(int index, CRLayer layer);// malloc, realloc
 void CRAppendWorldLayer(CRLayer layer);// malloc, realloc
 void CRAppendUILayer(CRLayer layer);// malloc, realloc
 

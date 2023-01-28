@@ -182,24 +182,28 @@ void CRAddWorldLayer(int index, CRLayer layer) {
         return;// TODO out of bounds error
     if (index == cr_config->world_layer_count) {
         CRAppendWorldLayer(layer);
+        return;
     }
     NewWorldLayer();
     for (int i = cr_config->world_layer_count - 1; i >= index; i--) {
         cr_config->world_layers[i+1] = cr_config->world_layers[i];
     }
     cr_config->world_layer_count++;
+    cr_config->world_layers[index] = layer;
 }
 void CRAddUILayer(int index, CRLayer layer) {
     if (index > cr_config->ui_layer_count)
         return;// TODO out of bounds error
     if (index == cr_config->ui_layer_count) {
         CRAppendUILayer(layer);
+        return;
     }
     NewUILayer();
     for (int i = cr_config->ui_layer_count - 1; i >= index; i--) {
         cr_config->ui_layers[i+1] = cr_config->ui_layers[i];
     }
     cr_config->ui_layer_count++;
+    cr_config->ui_layers[index] = layer;
 }
 void CRAppendWorldLayer(CRLayer layer) {
     NewWorldLayer();
