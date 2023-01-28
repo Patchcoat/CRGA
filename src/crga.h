@@ -7,8 +7,8 @@
  *       Revision:  none
  *       Compiler:  gcc
  *
- *         Author:  Spencer Welch
- *   Organization:  BYU-I
+ *         Author:  
+ *   Organization:  
  *
  * =====================================================================================
  */

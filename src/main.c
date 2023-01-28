@@ -10,8 +10,8 @@
  *       Revision:  none
  *       Compiler:  gcc
  *
- *         Author:  Spencer Welch
- *   Organization:  BYU-I
+ *         Author:  
+ *   Organization:  
  *
  * =====================================================================================
  */
@@ -24,7 +24,6 @@
 CREntity *movable;
 
 void CRPreDraw() {
-    int change = 0;
     if (IsKeyPressed(KEY_W)) {
         movable->position.y -= 1;
     } else if (IsKeyPressed(KEY_S)) {
