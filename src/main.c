@@ -40,21 +40,17 @@ int main() {
     CRInit();
 
     //CRLoadFont("resources/dejavu-sans.book.ttf");
-    CRTile grid[GRIDHEIGHT * GRIDWIDTH] = {0};
-    CRSetWorldGrid(grid, GRIDHEIGHT, GRIDWIDTH);
-    CRSetWorldTile(CRCTile("A"), (Vector2) {0,0});
-    CRSetWorldTile(CRCTile("b"), (Vector2) {1,0});
-    CRSetWorldTile(CRCTile("B"), (Vector2) {0,1});
+    CRSetWorldTileChar("A", (Vector2) {0,0});
+    CRSetWorldTileChar("b", (Vector2) {1,0});
+    CRSetWorldTileChar("B", (Vector2) {0,1});
 
-    CRTile grid2[GRIDHEIGHT * GRIDWIDTH] = {0};
-    CRLayer layer = CRNewLayer(grid2, GRIDHEIGHT, GRIDWIDTH, (Vector2) {0,0});
-    CRSetTileOnLayer(&layer, CRCTile("C"), (Vector2){1, 1});
+    CRLayer layer = CRInitLayer();
+    CRSetLayerTileChar(&layer, "C", (Vector2){1, 1});
     CRAddWorldLayer(1, layer);
 
     CREntity player = CRNewEntity(CRCTile("@"), (Vector2) {0, 0});
     player.tile.shift = (Vector2) {0, -3};
     CRAddEntity(&player);
-    CRAddEntityToLayer(0, &player);
     movable = &player;
 
     CRLoop();

@@ -17,6 +17,7 @@
  */
 #include "crga.h"
 #include <stdio.h>
+#include <string.h>
 
 CRConfig *cr_config;
 
@@ -25,6 +26,7 @@ void CRInit() {
     CRConfig *config = (CRConfig *) malloc(sizeof(CRConfig));
     CRInitConfig(config);
     CRSetConfig(config);
+    CRInitWorld();
     CRInitWindow();
 }
 void CRInitConfig(CRConfig *config) {
@@ -32,6 +34,13 @@ void CRInitConfig(CRConfig *config) {
     config->window_height = 450;
     config->fps = 60;
     config->title = "CRGA Basic Window";
+
+    config->tile_size = 20.0f;
+
+    config->default_layer_width = config->window_width / config->tile_size;
+    config->default_layer_height = config->window_height / config->tile_size;
+    printf("%d\n", config->default_layer_width);
+    printf("%d\n", config->default_layer_height);
 
     config->default_foreground = WHITE;
     config->default_background = BLACK;
@@ -46,8 +55,6 @@ void CRInitConfig(CRConfig *config) {
     config->main_camera.offset = (Vector2){0.0f, 0.0f};
     config->main_camera.rotation = 0.0f;
     config->main_camera.zoom = 1.0f;
-
-    config->tile_size = 20.0f;
 
     config->background_color = BLACK;
 
@@ -69,10 +76,20 @@ void CRClose() {
     CloseWindow();
 }
 void CRUnloadLayers() {
-    if (cr_config->world_layer_count > 0) {
+    size_t count = cr_config->world_layer_count;
+    if (count > 0) {
+        for (int i = 0; i < count; i++) {
+            free(cr_config->world_layers[i].grid);
+            free(cr_config->world_layers[i].mask.grid);
+        }
         free(cr_config->world_layers);
     }
-    if (cr_config->ui_layer_count > 0) {
+    count = cr_config->ui_layer_count;
+    if (count > 0) {
+        for (int i = 0; i < count; i++) {
+            free(cr_config->ui_layers[i].grid);
+            free(cr_config->ui_layers[i].mask.grid);
+        }
         free(cr_config->ui_layers);
     }
 }
@@ -140,16 +157,42 @@ void CRLoadFontSize(const char *font_path, int size) {
 }
 
 // Layers
-CRLayer CRNewLayer(CRTile *grid, int width, int height, Vector2 position) {
+CRLayer CRInitLayer() {
+    CRLayer layer = CRNewLayer();
+    CRInitGrid(&layer);
+    return layer;
+}
+CRLayer CRNewLayer() {
     CRLayer layer;
-    layer.mask = 0;
-    layer.grid = grid;
+    layer.grid = 0;
+    layer.mask.grid = 0;
+    layer.mask.flags = 0b00;
+    layer.mask.count = -1;
     layer.entities.head = 0;
     layer.entities.tail = 0;
-    layer.width = width;
-    layer.height = height;
-    layer.position = position;
+    layer.width = cr_config->default_layer_width;
+    layer.height = cr_config->default_layer_height;
+    printf("NewLayer %d\n", layer.width);
+    printf("NewLayer %d\n", layer.height);
+    layer.position = (Vector2) {0, 0};
     return layer;
+}
+void CRInitGrid(CRLayer *layer) {
+    int size = layer->width * layer->height;
+    printf("%d\n", size);
+    if (layer->mask.grid != 0)
+        free(layer->mask.grid);
+    layer->mask.grid = malloc(sizeof(uint8_t) * size);
+    for (int i = 0; i < size; i++)
+        layer->mask.grid[i] = 0;
+
+    if (layer->grid != 0)
+        free(layer->grid);
+    layer->grid = malloc(sizeof(CRTile) * size);
+    CRTile zero = {0};
+    zero.index.i = 0;
+    for (int i = 0; i < size; i++)
+        layer->grid[i] = zero;
 }
 void CRSetWorldLayer(int index, CRLayer layer) {
     if (cr_config->world_layer_count < index)
@@ -215,6 +258,40 @@ void CRAppendUILayer(CRLayer layer) {
     cr_config->ui_layers[cr_config->ui_layer_count] = layer;
     cr_config->ui_layer_count++;
 }
+void CRInitWorld() {
+    if (cr_config->world_layer_count != 0)
+        return;
+    CRLayer layer = CRNewLayer();
+    CRInitGrid(&layer);
+    CRAppendWorldLayer(layer);
+}
+void CRInitUI() {
+    if (cr_config->ui_layer_count != 0)
+        return;
+    CRLayer layer = CRNewLayer();
+    CRInitGrid(&layer);
+    CRAppendUILayer(layer);
+}
+
+// Mask
+void CRSetGridMask(uint8_t *grid, uint8_t tile, Vector2 position, int width, int height) {
+    int x = position.x;
+    int y = position.y;
+    if (x > width || y > height)
+        return;
+    grid[x + y * width] = tile;
+}
+void CRSetLayerMask(CRLayer *layer, uint8_t tile, Vector2 position) {
+    int width = layer->width;
+    int height = layer->height;
+    CRSetGridMask(layer->mask.grid, tile, position, width, height);
+}
+void CRSetWorldLayerMask(int index, uint8_t tile, Vector2 position) {
+    CRSetLayerMask(&cr_config->world_layers[0], tile, position);
+}
+void CRSetUILayerMask(int index, uint8_t tile, Vector2 position) {
+    CRSetLayerMask(&cr_config->ui_layers[0], tile, position);
+}
 
 // Entities
 CREntity CRNewEntity(CRTile tile, Vector2 position) {
@@ -275,74 +352,49 @@ CRTile CRCTile(char *string) {
     }
     return tile;
 }
-CRTile CRNewTileIndex(int index) {
+CRTile CRNewITile(int index) {
     CRTile tile = DefaultTileConfig(index);
     return tile;
 }
-void SetGrid(CRLayer *layer, CRTile *grid, int width, int height) {
-    layer->grid = grid;
-    layer->width = width;
-    layer->height = height;
-}
-void CRSetTileOnGrid(CRTile *grid, CRTile tile, Vector2 position, int width, int height) {
+void CRSetGridTile(CRTile *grid, CRTile tile, Vector2 position, int width, int height) {
     int x = position.x;
     int y = position.y;
     if (x > width || y > height)
         return; // TODO return out of bounds error
     grid[x + y * width] = tile;
 }
-void CRSetTileOnLayer(CRLayer *layer, CRTile tile, Vector2 position) {
-    int x = position.x;
-    int y = position.y;
+void CRSetLayerTile(CRLayer *layer, CRTile tile, Vector2 position) {
     int width = layer->width;
     int height = layer->height;
-    if (x > width || y > height)
-        return; // TODO return out of bounds error
-    layer->grid[x + y * width] = tile;
+    CRSetGridTile(layer->grid, tile, position, width, height);
+}
+void CRSetLayerTileChar(CRLayer *layer, char *string, Vector2 position) {
+    CRTile tile = CRCTile(string);
+    CRSetLayerTile(layer, tile, position);
 }
 void CRSetWorldTile(CRTile tile, Vector2 position) {
-    CRSetTileOnLayer(&cr_config->world_layers[0], tile, position);
+    CRSetLayerTile(&cr_config->world_layers[0], tile, position);
 }
 void CRSetUITile(CRTile tile, Vector2 position) {
-    CRSetTileOnLayer(&cr_config->ui_layers[0], tile, position);
+    CRSetLayerTile(&cr_config->ui_layers[0], tile, position);
 }
-void CRSetTileOnWorldLayer(int layer_index, CRTile tile, Vector2 position) {
-    if (cr_config->world_layer_count < layer_index)
+void CRSetWorldTileChar(char *character, Vector2 position) {
+    CRTile tile = CRCTile(character);
+    CRSetLayerTile(&cr_config->world_layers[0], tile, position);
+}
+void CRSetUITileChar(char *character, Vector2 position) {
+    CRTile tile = CRCTile(character);
+    CRSetLayerTile(&cr_config->ui_layers[0], tile, position);
+}
+void CRSetWorldLayerTile(int index, CRTile tile, Vector2 position) {
+    if (cr_config->world_layer_count < index)
         return; // TODO return out of bounds error
-    CRSetTileOnLayer(cr_config->world_layers + layer_index, tile, position);
+    CRSetLayerTile(cr_config->world_layers + index, tile, position);
 }
-void CRSetTileOnUILayer(int layer_index, CRTile tile, Vector2 position) {
-    if (cr_config->ui_layer_count < layer_index)
+void CRSetUILayerTile(int index, CRTile tile, Vector2 position) {
+    if (cr_config->ui_layer_count < index)
         return; // TODO return out of bounds error
-    CRSetTileOnLayer(cr_config->world_layers + layer_index, tile, position);
-}
-void CRSetWorldGrid(CRTile *grid, int width, int height) {
-    if (cr_config->world_layer_count == 0) {
-        Vector2 position = {0.0f, 0.0f};
-        CRLayer layer = CRNewLayer(grid, width, height, position);
-        CRAppendWorldLayer(layer);
-    }
-    CRSetTilesOnWorldLayer(grid, 0, width, height);
-}
-void CRSetUIGrid(CRTile *grid, int width, int height) {
-    if (cr_config->ui_layer_count == 0) {
-        Vector2 position = {0.0f, 0.0f};
-        CRLayer layer = CRNewLayer(grid, width, height, position);
-        CRAppendUILayer(layer);
-    }
-    CRSetTilesOnUILayer(grid, 0, width, height);
-}
-int CRSetTilesOnWorldLayer(CRTile *grid, int layer, int width, int height) {
-    if (layer >= cr_config->world_layer_count)
-        return 1;
-    SetGrid(cr_config->world_layers + layer, grid, width, height);
-    return 0;
-}
-int CRSetTilesOnUILayer(CRTile *grid, int layer, int width, int height) {
-    if (layer >= cr_config->ui_layer_count)
-        return 1;
-    SetGrid(cr_config->ui_layers + layer, grid, width, height);
-    return 0;
+    CRSetLayerTile(cr_config->world_layers + index, tile, position);
 }
 
 // Draw Tiles
@@ -406,7 +458,7 @@ void CRDrawLayer(CRLayer *layer) {
     float tile_size = cr_config->tile_size;
     for (int row = 0; row < layer->height; row++) {
         for (int col = 0; col < layer->width; col++) {
-            CRTile *tile = &layer->grid[col * layer->width + row];
+            CRTile *tile = &layer->grid[col + row * layer->width];
             CRDrawTile(tile, tile_size, (Vector2) {tile_size * row, tile_size * col});
         }
     }

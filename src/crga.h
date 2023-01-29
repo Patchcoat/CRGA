@@ -57,7 +57,7 @@ typedef struct {
     // transparency for a given tile. 
     // 0: Default, objects are made invisible
     // 255: means totally opaque
-    uint8_t *tiles;
+    uint8_t *grid;
     // flags for the behavior of the map. 
     // 0 bit: 1 mask up, 0 mask down. 
     // 1 bit: 1 don't mask current layer, 0 mask current layer.
@@ -65,15 +65,15 @@ typedef struct {
     // how many layers the mask should affect beyond the current layer. 
     // 0: mask only the current layer, or no layers if not masking the current layer.
     // -1: mask all layers in the direction defined by the flags
-    int count; 
+    int count;
 } CRMask;
 typedef struct {
-    CRMask *mask;
+    CRMask mask;
     CRTile *grid;
     CREntityList entities;
+    Vector2 position;
     int width;
     int height;
-    Vector2 position;
     int font;
 } CRLayer;
 
@@ -82,6 +82,11 @@ typedef struct {
     int window_height;
     int fps;
     char *title;
+
+    float tile_size;
+
+    int default_layer_width;
+    int default_layer_height;
 
     Color default_foreground;
     Color default_background;
@@ -93,8 +98,6 @@ typedef struct {
     size_t ui_layer_count;
 
     Camera2D main_camera;
-
-    float tile_size;
 
     Color background_color;
 
@@ -125,13 +128,23 @@ void CRLoadFont(const char *font_path);
 void CRLoadFontSize(const char *font_path, int size);// malloc, realloc
 
 // Layers
-CRLayer CRNewLayer(CRTile *grid, int width, int height, Vector2 position);
+CRLayer CRInitLayer();
+CRLayer CRNewLayer();
+void CRInitGrid(CRLayer *layer);// malloc
 void CRSetWorldLayer(int index, CRLayer layer);
 void CRSetUILayer(int index, CRLayer layer);
 void CRAddWorldLayer(int index, CRLayer layer);// malloc, realloc
 void CRAddUILayer(int index, CRLayer layer);// malloc, realloc
 void CRAppendWorldLayer(CRLayer layer);// malloc, realloc
 void CRAppendUILayer(CRLayer layer);// malloc, realloc
+void CRInitWorld();
+void CRInitUI();
+
+// Mask
+void CRSetGridMask(uint8_t *grid, uint8_t tile, Vector2 position, int width, int height);
+void CRSetLayerMask(CRLayer *layer, uint8_t tile, Vector2 position);
+void CRSetWorldLayerMask(int index, uint8_t tile, Vector2 position);
+void CRSetUILayerMask(int index, uint8_t tile, Vector2 position);
 
 // Entities
 CREntity CRNewEntity(CRTile tile, Vector2 position);
@@ -141,15 +154,16 @@ void CRAddEntityToLayer(CRLayer *layer, CREntity *entity);
 // Tiles
 CRTile CRCTile(char *string);
 CRTile CRITile(int index);
-void SetGrid(CRLayer *layer, CRTile *grid, int width, int height);
-void CRSetTileOnGrid(CRTile *grid, CRTile tile, Vector2 position, int width, int height);
-void CRSetTileOnLayer(CRLayer *layer, CRTile tile, Vector2 position);
+CRTile CRNewTileIndex(int index);
+void CRSetGridTile(CRTile *grid, CRTile tile, Vector2 position, int width, int height);
+void CRSetLayerTile(CRLayer *layer, CRTile tile, Vector2 position);
+void CRSetLayerTileChar(CRLayer *layer, char *string, Vector2 position);
 void CRSetWorldTile(CRTile tile, Vector2 position);
 void CRSetUITile(CRTile tile, Vector2 position);
-void CRSetWorldGrid(CRTile *grid, int width, int height);
-void CRSetUIGrid(CRTile *grid, int width, int height);
-int CRSetTilesOnWorldLayer(CRTile *grid, int layer, int width, int height);
-int CRSetTilesOnUILayer(CRTile *grid, int layer, int width, int height);
+void CRSetWorldTileChar(char *character, Vector2 position);
+void CRSetUITileChar(char *character, Vector2 position);
+void CRSetWorldLayerTile(int index, CRTile tile, Vector2 position);
+void CRSetUILayerTile(int index, CRTile tile, Vector2 position);
 // Draw Tiles
 void CRDrawTile(CRTile *tile, float tile_size, Vector2 position);
 void CRDrawTileChar(CRTile *tile, float tile_size, Vector2 position);
