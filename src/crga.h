@@ -72,10 +72,15 @@ typedef struct {
     CRTile *grid;
     CREntityList entities;
     Vector2 position;
+    size_t index;
     int width;
     int height;
     int font;
 } CRLayer;
+typedef struct {
+    Image *tiles;
+    size_t tile_count;
+} CRTilemap;
 
 typedef struct {
     int window_width;
@@ -103,6 +108,9 @@ typedef struct {
 
     Font *fonts;
     size_t font_count;
+
+    CRTilemap *tilemaps;
+    size_t tilemap_count;
 } CRConfig;
 
 // Init
@@ -115,6 +123,7 @@ void CRInitWindow();
 void CRClose();
 void CRUnloadLayers();
 void CRUnloadFonts();
+void CRUnloadTilemaps();
 
 // Loop
 void CRLoop();
@@ -126,6 +135,9 @@ void CRPostDraw() __attribute__((weak));
 // Font Loading
 void CRLoadFont(const char *font_path);
 void CRLoadFontSize(const char *font_path, int size);// malloc, realloc
+
+// Tilemap Loading
+void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height);
 
 // Layers
 CRLayer CRInitLayer();
@@ -145,6 +157,8 @@ void CRSetGridMask(uint8_t *grid, uint8_t tile, Vector2 position, int width, int
 void CRSetLayerMask(CRLayer *layer, uint8_t tile, Vector2 position);
 void CRSetWorldLayerMask(int index, uint8_t tile, Vector2 position);
 void CRSetUILayerMask(int index, uint8_t tile, Vector2 position);
+void CRSetWorldMask(uint8_t tile, Vector2 position);
+void CRSetUIMask(uint8_t tile, Vector2 position);
 
 // Entities
 CREntity CRNewEntity(CRTile tile, Vector2 position);
@@ -165,8 +179,8 @@ void CRSetUITileChar(char *character, Vector2 position);
 void CRSetWorldLayerTile(int index, CRTile tile, Vector2 position);
 void CRSetUILayerTile(int index, CRTile tile, Vector2 position);
 // Draw Tiles
-void CRDrawTile(CRTile *tile, float tile_size, Vector2 position);
-void CRDrawTileChar(CRTile *tile, float tile_size, Vector2 position);
+void CRDrawTile(CRTile *tile, float tile_size, Vector2 position, uint8_t mask);
+void CRDrawTileChar(CRTile *tile, float tile_size, Vector2 position, uint8_t mask);
 void CRDrawLayer(CRLayer *layer);
 
 // Camera functions

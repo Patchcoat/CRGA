@@ -39,13 +39,16 @@ void CRPreDraw() {
 int main() {
     CRInit();
 
+    CRLoadTilemap("resources/tilemap.png", 8, 8);
     //CRLoadFont("resources/dejavu-sans.book.ttf");
     CRSetWorldTileChar("A", (Vector2) {0,0});
     CRSetWorldTileChar("b", (Vector2) {1,0});
     CRSetWorldTileChar("B", (Vector2) {0,1});
+    //CRSetWorldMask(100, (Vector2) {1,1});
 
     CRLayer layer = CRInitLayer();
     CRSetLayerTileChar(&layer, "C", (Vector2){1, 1});
+    //CRSetLayerMask(&layer, 100, (Vector2) {1,1});
     CRAddWorldLayer(1, layer);
 
     CREntity player = CRNewEntity(CRCTile("@"), (Vector2) {0, 0});
