@@ -75,10 +75,12 @@ typedef struct {
     size_t index;
     int width;
     int height;
-    int font;
+    int map;
 } CRLayer;
 typedef struct {
-    Image *tiles;
+    Texture2D texture;
+    int width;
+    int height;
     size_t tile_count;
 } CRTilemap;
 
@@ -105,6 +107,8 @@ typedef struct {
     Camera2D main_camera;
 
     Color background_color;
+
+    uint8_t tilemap_flags; // 0 bit: 1 tilemap, 0 font
 
     Font *fonts;
     size_t font_count;
@@ -172,15 +176,19 @@ CRTile CRNewTileIndex(int index);
 void CRSetGridTile(CRTile *grid, CRTile tile, Vector2 position, int width, int height);
 void CRSetLayerTile(CRLayer *layer, CRTile tile, Vector2 position);
 void CRSetLayerTileChar(CRLayer *layer, char *string, Vector2 position);
+void CRSetLayerTileIndex(CRLayer *layer, int index, Vector2 position);
 void CRSetWorldTile(CRTile tile, Vector2 position);
 void CRSetUITile(CRTile tile, Vector2 position);
 void CRSetWorldTileChar(char *character, Vector2 position);
 void CRSetUITileChar(char *character, Vector2 position);
+void CRSetWorldTileIndex(int index, Vector2 position);
+void CRSetUITileIndex(int index, Vector2 position);
 void CRSetWorldLayerTile(int index, CRTile tile, Vector2 position);
 void CRSetUILayerTile(int index, CRTile tile, Vector2 position);
 // Draw Tiles
 void CRDrawTile(CRTile *tile, float tile_size, Vector2 position, uint8_t mask);
-void CRDrawTileChar(CRTile *tile, float tile_size, Vector2 position, uint8_t mask);
+void CRDrawTileChar(CRTile *tile, Font *font, float tile_size, Vector2 position, uint8_t mask);
+void CRDrawTileImage(CRTile *tile, CRTilemap *tilemap, float tile_size, Vector2 position, uint8_t mask);
 void CRDrawLayer(CRLayer *layer);
 
 // Camera functions

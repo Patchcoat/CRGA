@@ -56,8 +56,13 @@ void CRInitConfig(CRConfig *config) {
 
     config->background_color = BLACK;
 
+    config->tilemap_flags = 0;
+
     config->fonts = 0;
     config->font_count = 0;
+
+    config->tilemaps = 0;
+    config->tilemap_count = 0;
 }
 inline void CRSetConfig(CRConfig *config) {
     cr_config = config;
@@ -99,12 +104,6 @@ inline void CRUnloadFonts() {
     free(cr_config->fonts);
 }
 inline void CRUnloadTilemaps() {
-    for (int i = cr_config->tilemap_count-1; i >= 0; i--) {
-        Image *images = cr_config->tilemaps[i].tiles;
-        for (int j = cr_config->tilemaps[i].tile_count; i >= 0; i--) {
-            UnloadImage(images[j]);
-        }
-    }
     free(cr_config->tilemaps);
 }
 
@@ -165,6 +164,23 @@ void CRLoadFontSize(const char *font_path, int size) {
 }
 
 // Tilemap Loading
+Rectangle TileIndexRec(CRTilemap *tilemap, int index) {
+    int tile_width = tilemap->width;
+    int tile_height = tilemap->height;
+    Rectangle rect;
+    rect.x = 0;
+    rect.y = 0;
+    rect.width = tile_width;
+    rect.height = tile_height;
+    if (index > tilemap->tile_count)
+        return rect;
+    float img_width = tilemap->texture.width;
+
+    rect.y = (int) (img_width/tile_width);
+    rect.x = index % (int) rect.y;
+    
+    return rect;
+}
 void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height) {
     if (cr_config->tilemap_count == 255) {
         // there are too many tiles, exit out
@@ -174,11 +190,18 @@ void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height) {
     } else {
         cr_config->tilemaps = (CRTilemap *) realloc(cr_config->tilemaps, sizeof(CRTilemap) * (cr_config->tilemap_count + 1));
     }
-    Image image = LoadImage(tilemap_path);
+    size_t index = cr_config->tilemap_count;
+    cr_config->tilemap_count++;
 
-
-
-    UnloadImage(image);
+    cr_config->tilemaps[index].texture = LoadTexture(tilemap_path);
+    Texture2D tilemap_texture = cr_config->tilemaps[index].texture;
+    
+    int count_h = tilemap_texture.width / tile_width;
+    int count_v = tilemap_texture.height / tile_height;
+    int count = count_h * count_v;
+    cr_config->tilemaps[index].width = tile_width;
+    cr_config->tilemaps[index].height = tile_height;
+    cr_config->tilemaps[index].tile_count = count;
 }
 
 // Layers
@@ -209,6 +232,7 @@ CRLayer CRNewLayer() {
     layer.width = cr_config->default_layer_width;
     layer.height = cr_config->default_layer_height;
     layer.position = (Vector2) {0, 0};
+    layer.map = -1;
     return layer;
 }
 void CRInitGrid(CRLayer *layer) {
@@ -447,7 +471,7 @@ CRTile CRCTile(char *string) {
     }
     return tile;
 }
-CRTile CRNewITile(int index) {
+CRTile CRITile(int index) {
     CRTile tile = DefaultTileConfig(index);
     return tile;
 }
@@ -467,10 +491,22 @@ void CRSetLayerTileChar(CRLayer *layer, char *string, Vector2 position) {
     CRTile tile = CRCTile(string);
     CRSetLayerTile(layer, tile, position);
 }
+void CRSetLayerTileIndex(CRLayer *layer, int index, Vector2 position) {
+    CRTile tile = CRITile(index);
+    CRSetLayerTile(layer, tile, position);
+}
 void CRSetWorldTile(CRTile tile, Vector2 position) {
     CRSetLayerTile(&cr_config->world_layers[0], tile, position);
 }
 void CRSetUITile(CRTile tile, Vector2 position) {
+    CRSetLayerTile(&cr_config->ui_layers[0], tile, position);
+}
+void CRSetWorldTileIndex(int index, Vector2 position) {
+    CRTile tile = CRITile(index);
+    CRSetLayerTile(&cr_config->world_layers[0], tile, position);
+}
+void CRSetUITileIndex(int index, Vector2 position) {
+    CRTile tile = CRITile(index);
     CRSetLayerTile(&cr_config->ui_layers[0], tile, position);
 }
 void CRSetWorldTileChar(char *character, Vector2 position) {
@@ -512,10 +548,13 @@ Vector2 CenterTextEx(Vector2 position, Font font, float tile_size, char *string_
     return position;
 }
 void CRDrawTile(CRTile *tile, float tile_size, Vector2 position, uint8_t mask) {
-    CRDrawTileChar(tile, tile_size, position, mask);
-    // CRDrawTileIndex(tile, tile_size, position);
+    if ((cr_config->tilemap_flags & 0b1) == 0) {
+        CRDrawTileChar(tile, 0, tile_size, position, mask);
+    } else {
+        CRDrawTileImage(tile, 0, tile_size, position, mask);
+    }
 }
-void CRDrawTileChar(CRTile *tile, float tile_size, Vector2 position, uint8_t mask) {
+void CRDrawTileChar(CRTile *tile, Font *font, float tile_size, Vector2 position, uint8_t mask) {
     if (tile->index.i == 0)
         return;
 
@@ -527,17 +566,9 @@ void CRDrawTileChar(CRTile *tile, float tile_size, Vector2 position, uint8_t mas
     transparency *= mask_multiplier;
     tile_color.a = transparency;
 
-    if (transparency < 255){
-        printf("tile: %f\n", transparency);
-    }
-
     transparency = text_color.a;
     transparency *= mask_multiplier;
     text_color.a = transparency;
-
-    if (transparency < 255) {
-        printf("text: %f\n", transparency);
-    }
 
     if (tile_color.a == 0 && text_color.a == 0)
         return;
@@ -545,6 +576,7 @@ void CRDrawTileChar(CRTile *tile, float tile_size, Vector2 position, uint8_t mas
     char string_out[5];
     for (int i = 0; i <= 4; i++)
         string_out[i] = tile->index.c[i];
+
     float x_pos = position.x;
     float y_pos = position.y;
 
@@ -553,35 +585,62 @@ void CRDrawTileChar(CRTile *tile, float tile_size, Vector2 position, uint8_t mas
     DrawRectangleLines(x_pos, y_pos, tile_size, tile_size, RED);
 #endif
     Vector2 shift = tile->shift;
-    if (cr_config->font_count > 0) {
-        position = CenterTextEx(position, cr_config->fonts[0], tile_size, string_out);
+    if (font != 0) {
+        position = CenterTextEx(position, *font, tile_size, string_out);
         position = ShiftPosition(position, shift);
-        DrawTextEx(cr_config->fonts[0], string_out, position, 24, 0, text_color);
+        DrawTextEx(*font, string_out, position, 24, 0, text_color);
     } else {
         position = CenterText(position, tile_size, string_out);
         position = ShiftPosition(position, shift);
         DrawText(string_out, position.x, position.y, 24, text_color);
     }
 }
-#if 0 // TODO
-void CRDrawTileMap(CRTile *tile, float tile_size, float x_pos, float y_pos) {
+void CRDrawTileImage(CRTile *tile, CRTilemap *tilemap, float tile_size, Vector2 position, uint8_t mask) {
     if (tile->index.i == 0)
         return;
-    int32_t index = tile->index.i;
+
+    Color tile_color = tile->background;
+    Color foreground_color = tile->foreground;
+    float mask_multiplier = (float) mask/255.0f;
+
+    float transparency = tile_color.a;
+    transparency *= mask_multiplier;
+    tile_color.a = transparency;
+
+    transparency = foreground_color.a;
+    transparency *= mask_multiplier;
+    foreground_color.a = transparency;
+
+    if (tile_color.a == 0 && foreground_color.a == 0)
+        return;
+
+    char string_out[5];
+    for (int i = 0; i <= 4; i++)
+        string_out[i] = tile->index.c[i];
+
+    float x_pos = position.x;
+    float y_pos = position.y;
+
     DrawRectangle(x_pos, y_pos, tile_size, tile_size, tile->background);
 #if GRID_OUTLINE
     DrawRectangleLines(x_pos, y_pos, tile_size, tile_size, RED);
 #endif
-    Vector2 position = {x_pos, y_pos};
+    Vector2 shift = tile->shift;
+    if (tilemap != 0) {
+        position = ShiftPosition(position, shift);
+        Rectangle rect = TileIndexRec(tilemap, tile->index.i);
+        DrawTextureRec(tilemap->texture, rect, position, foreground_color);
+    } else {
+        // TODO handle the problem of no tilemap
+    }
 }
-#endif
 void CRDrawLayer(CRLayer *layer) {
     float tile_size = cr_config->tile_size;
     for (int row = 0; row < layer->height; row++) {
         for (int col = 0; col < layer->width; col++) {
             CRTile *tile = &layer->grid[col + row * layer->width];
-            uint8_t mask = CRTileMask(layer->index, (Vector2){row, col});
-            CRDrawTile(tile, tile_size, (Vector2) {tile_size * row, tile_size * col}, mask);
+            uint8_t mask = CRTileMask(layer->index, (Vector2){col, row});
+            CRDrawTile(tile, tile_size, (Vector2) {tile_size * col, tile_size * row}, mask);
         }
     }
     if (layer->entities.head == 0)
