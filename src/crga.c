@@ -26,6 +26,7 @@ void CRInit() {
     CRConfig *config = (CRConfig *) malloc(sizeof(CRConfig));
     CRInitConfig(config);
     CRSetConfig(config);
+    CRInitCharIndexAssoc();
     CRInitWorld();
     CRInitWindow();
 }
@@ -56,7 +57,8 @@ void CRInitConfig(CRConfig *config) {
 
     config->background_color = BLACK;
 
-    config->tilemap_flags = 0;
+    config->assocs = 0;
+    config->assoc_count = 0;
 
     config->fonts = 0;
     config->font_count = 0;
@@ -67,6 +69,22 @@ void CRInitConfig(CRConfig *config) {
 inline void CRSetConfig(CRConfig *config) {
     cr_config = config;
 }
+inline void CRInitCharIndexAssoc() {
+    for (int i = 0; i < 255; i++) {
+        int index = i;
+        // set the character string to the ASCII value followed by three null terminators
+        cr_config->char_index_assoc[i].character[0] = (uint32_t) 0;
+        cr_config->char_index_assoc[i].character[0] = (char) i;
+        // Shift all all ASCII control codes to the end
+        index = (i > 0 && i < 32) ? i + 96 : index;
+        // shift all (non extended ascii) characters to the front
+        index = (i >= 32 && i <= 127) ? i - 31 : index;
+        // extended ascii character number matches it's index
+        cr_config->char_index_assoc[i].index = index;
+        // set the linked list next to the null ptr
+        cr_config->char_index_assoc[i].next = 0;
+    }
+}
 inline void CRInitWindow() {
     InitWindow(cr_config->window_width, cr_config->window_height, cr_config->title);
     SetTargetFPS(cr_config->fps);
@@ -76,7 +94,9 @@ inline void CRInitWindow() {
 void CRClose() {
     CRUnloadFonts();
     CRUnloadTilemaps();
+    CRUnloadCharIndexAssoc();
     CRUnloadLayers();
+    CRUnloadMasks();
     CloseWindow();
 }
 void CRUnloadLayers() {
@@ -84,7 +104,6 @@ void CRUnloadLayers() {
     if (count > 0) {
         for (int i = 0; i < count; i++) {
             free(cr_config->world_layers[i].grid);
-            free(cr_config->world_layers[i].mask.grid);
         }
         free(cr_config->world_layers);
     }
@@ -92,7 +111,6 @@ void CRUnloadLayers() {
     if (count > 0) {
         for (int i = 0; i < count; i++) {
             free(cr_config->ui_layers[i].grid);
-            free(cr_config->ui_layers[i].mask.grid);
         }
         free(cr_config->ui_layers);
     }
@@ -103,8 +121,20 @@ inline void CRUnloadFonts() {
     }
     free(cr_config->fonts);
 }
+inline void CRUnloadCharIndexAssoc() {
+    if (cr_config->assoc_count == 0)
+        return;
+    free(cr_config->assocs);
+}
 inline void CRUnloadTilemaps() {
     free(cr_config->tilemaps);
+}
+void CRUnloadMasks() {
+    if (cr_config->mask_count == 0)
+        return;
+    for (int i = 0; i < cr_config->mask_count; i++)
+        free(cr_config->masks[i].grid);
+    free(cr_config->masks);
 }
 
 // Loop
@@ -164,7 +194,17 @@ void CRLoadFontSize(const char *font_path, int size) {
 }
 
 // Tilemap Loading
+int cmpstr(char *s1, char *s2, size_t size) {
+    for (int i = 0; i < size; i++) {
+        if (s1[i] != s2[i])
+            return 0;
+        if (s1[i] == '\0')
+            break;
+    }
+    return 1;
+}
 Rectangle TileIndexRec(CRTilemap *tilemap, int index) {
+    index--;
     int tile_width = tilemap->width;
     int tile_height = tilemap->height;
     Rectangle rect;
@@ -174,11 +214,13 @@ Rectangle TileIndexRec(CRTilemap *tilemap, int index) {
     rect.height = tile_height;
     if (index > tilemap->tile_count)
         return rect;
-    float img_width = tilemap->texture.width;
 
-    rect.y = (int) (img_width/tile_width);
-    rect.x = index % (int) rect.y;
-    
+    int tiles_h = tilemap->texture.width / tile_width;
+
+    rect.x = (index % tiles_h) * tile_width;
+    int y_index = (float) index / (float) tiles_h;
+    rect.y = ((int) y_index) * tile_height;
+
     return rect;
 }
 void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height) {
@@ -203,6 +245,39 @@ void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height) {
     cr_config->tilemaps[index].height = tile_height;
     cr_config->tilemaps[index].tile_count = count;
 }
+void CRSetCharAssoc(char* character, int index) {
+    // Convert string to index
+    int assoc_index = character[0];
+    // use index to access value in array
+    CRCharIndexAssoc *assoc = &cr_config->char_index_assoc[assoc_index];
+    do {
+        // if the current value is the character we're looking for, replace it
+        if (cmpstr(assoc->character, character, 4)) {
+            assoc->index = index;
+            return;
+        }
+        // otherwise, move on to the next 
+        assoc = assoc->next;
+    } while(assoc != 0);
+    // if it doesn't exist, add add a new association
+    size_t assoc_count = cr_config->assoc_count;
+    if  (assoc_count == 0)
+        cr_config->assocs = malloc(sizeof(CRCharIndexAssoc));
+    else
+        cr_config->assocs = realloc(cr_config->assocs, 
+                sizeof(CRCharIndexAssoc) * (assoc_count + 1));
+    CRCharIndexAssoc *new_assoc = &cr_config->assocs[assoc_count];
+    // copy character over
+    for (int i = 0; i < 4; i++)
+        new_assoc->character[i] = character[i];
+    // assign index
+    new_assoc->index = index;
+    // insert new_assoc
+    new_assoc->next = cr_config->char_index_assoc[assoc_index].next;
+    cr_config->char_index_assoc[assoc_index].next = new_assoc;
+    // increment the counter
+    cr_config->assoc_count++;
+}
 
 // Layers
 int OnLayer(CRLayer *layer, Vector2 position) {
@@ -215,6 +290,16 @@ int OnLayer(CRLayer *layer, Vector2 position) {
     }
     return 1;
 }
+int OnMask(CRMask *mask, Vector2 position) {
+    position.x += mask->position.x;
+    position.y += mask->position.y;
+
+    if (position.x < 0 || position.x > mask->width || 
+            position.y < 0 || position.y > mask->height) {
+        return 0;
+    }
+    return 1;
+}
 CRLayer CRInitLayer() {
     CRLayer layer = CRNewLayer();
     CRInitGrid(&layer);
@@ -223,26 +308,18 @@ CRLayer CRInitLayer() {
 CRLayer CRNewLayer() {
     CRLayer layer;
     layer.grid = 0;
-    layer.mask.grid = 0;
-    layer.mask.flags = 0b00;
-    layer.mask.count = -1;
     layer.entities.head = 0;
     layer.entities.tail = 0;
-    layer.index = 0;
+    layer.tile_index = 0;
     layer.width = cr_config->default_layer_width;
     layer.height = cr_config->default_layer_height;
     layer.position = (Vector2) {0, 0};
-    layer.map = -1;
+    layer.flags = 0;
+    layer.mask_count = 0;
     return layer;
 }
 void CRInitGrid(CRLayer *layer) {
     int size = layer->width * layer->height;
-    if (layer->mask.grid != 0)
-        free(layer->mask.grid);
-    layer->mask.grid = malloc(sizeof(uint8_t) * size);
-    for (int i = 0; i < size; i++)
-        layer->mask.grid[i] = 255;
-
     if (layer->grid != 0)
         free(layer->grid);
     layer->grid = malloc(sizeof(CRTile) * size);
@@ -285,7 +362,6 @@ void CRAddWorldLayer(int index, CRLayer layer) {
         return;
     }
     NewWorldLayer();
-    layer.index = index;
     for (int i = cr_config->world_layer_count - 1; i >= index; i--) {
         cr_config->world_layers[i+1] = cr_config->world_layers[i];
     }
@@ -300,7 +376,6 @@ void CRAddUILayer(int index, CRLayer layer) {
         return;
     }
     NewUILayer();
-    layer.index = index;
     for (int i = cr_config->ui_layer_count - 1; i >= index; i--) {
         cr_config->ui_layers[i+1] = cr_config->ui_layers[i];
     }
@@ -309,13 +384,11 @@ void CRAddUILayer(int index, CRLayer layer) {
 }
 void CRAppendWorldLayer(CRLayer layer) {
     NewWorldLayer();
-    layer.index = cr_config->world_layer_count;
     cr_config->world_layers[cr_config->world_layer_count] = layer;
     cr_config->world_layer_count++;
 }
 void CRAppendUILayer(CRLayer layer) {
     NewUILayer();
-    layer.index = cr_config->ui_layer_count;
     cr_config->ui_layers[cr_config->ui_layer_count] = layer;
     cr_config->ui_layer_count++;
 }
@@ -333,83 +406,101 @@ void CRInitUI() {
     CRInitGrid(&layer);
     CRAppendUILayer(layer);
 }
+void CRSetLayerFlags(CRLayer *layer, int flags) {
+    layer->flags = flags;
+}
+void CRSetWorldFlags(int flags) {
+    cr_config->world_layers[0].flags = flags;
+}
+void CRSetUIFlags(int flags) {
+    cr_config->ui_layers[0].flags = flags;
+}
 
 // Mask
-uint8_t CRTileMask(int index, Vector2 position) {
-    int max = cr_config->world_layer_count;
-    if (index > max || index < 0)
+int CheckMaskFlags(uint8_t flags1, uint8_t flags2) {
+    int match = 0;
+    if ((flags1 & 0b0) == (flags2 & 0b0))
+        match = 1;
+    else if ((flags1 & 0b1) == (flags2 & 0b1))
+        match = 1;
+
+    return match;
+}
+size_t CRNewMask(int width, int height, uint8_t flags, Vector2 position) {
+    size_t index = cr_config->mask_count;
+    if (index == 0)
+        cr_config->masks = malloc(sizeof(CRMask));
+    else
+        cr_config->masks = realloc(cr_config->masks, sizeof(CRMask) * (index + 1));
+    CRMask *mask = &cr_config->masks[index];
+    size_t mask_size = width * height;
+    mask->grid = malloc(sizeof(uint8_t) * mask_size);
+    for (size_t i = 0; i < mask_size; i++)
+        mask->grid[i] = 255;
+    mask->width = width;
+    mask->height = height;
+    mask->flags = flags;
+    mask->position = position;
+    cr_config->mask_count++;
+    return index;
+}
+void CRAddMaskToLayer(size_t mask_index, CRLayer *layer) {
+    if (layer->mask_count == MAXLAYERMASKS)
+        return; // TODO out of bounds exception
+    layer->mask_indexes[layer->mask_count] = mask_index;
+    layer->mask_count++;
+}
+void CRSetWorldMask(Vector2 position, uint8_t mask_value) {
+    if (cr_config->world_layer_count == 0)
+        return; // TODO no world layer found
+    CRLayer *layer = &cr_config->world_layers[0];
+    if (layer->mask_count == 0) {
+        size_t new_mask = CRNewMask(layer->width, layer->height, 0b11, layer->position);
+        CRAddMaskToLayer(new_mask, layer);
+    }
+    CRMask *mask = &cr_config->masks[layer->mask_indexes[0]];
+    size_t mask_position = position.x + position.y * mask->width;
+    mask->grid[mask_position] = mask_value;
+}
+void CRSetUIMask(Vector2 position, uint8_t mask_value) {
+    if (cr_config->ui_layer_count == 0)
+        return; // TODO no ui layer found
+    CRLayer *layer = &cr_config->ui_layers[0];
+    if (layer->mask_count == 0) {
+        size_t new_mask = CRNewMask(layer->width, layer->height, 0b11, layer->position);
+        CRAddMaskToLayer(new_mask, layer);
+    }
+    CRMask *mask = &cr_config->masks[layer->mask_indexes[0]];
+    size_t mask_position = position.x + position.y * mask->width;
+    mask->grid[mask_position] = mask_value;
+}
+uint8_t CRMaskTile(CRLayer *layer, Vector2 position, uint8_t flags) {
+    // Position is the position on the layer
+    // bit 0 of flags indicates of it's a grid, bit 1 indicates if it's an entity
+    CRTile *tile = &layer->grid[(int) (position.x + position.y * layer->width)];
+    if (tile->index.i == 0)
         return 255;
-    float transparency = 255;
-
-    // Search Current Layer
-    CRLayer layer = cr_config->world_layers[index];
-    if ((layer.mask.flags & 0b10) >> 1 == 0 && OnLayer(&layer, position)) {
-        int pos = position.x + position.y * layer.width;
-        transparency -= 255 - layer.mask.grid[pos];
-        if (transparency <= 0)
+    uint8_t mask_value = 255;
+    for (int i = 0; i < layer->mask_count; i++) {
+        CRMask mask = cr_config->masks[i];
+        // see if point is on the layer and mask, otherwise move to the next layer
+        if (!(OnLayer(layer, position) && OnMask(&mask, position)))
+            continue;
+        // verify behavior from flags
+        if (!CheckMaskFlags(flags, mask.flags))
+            continue;
+        // grab tile value on layer
+        Vector2 shifted_position = position;
+        shifted_position.x += mask.position.x;
+        shifted_position.y += mask.position.y;
+        size_t position_index = shifted_position.x + (shifted_position.y * mask.width);
+        int value = mask_value;
+        value -= 255 - mask.grid[position_index];
+        if (value <= 0)
             return 0;
+        mask_value = value;
     }
-
-    // Search Up
-    int i, shift = 0;
-    for (i = index+1; i < max; i++) {
-        shift++;
-        layer = cr_config->world_layers[i];
-        if ((layer.mask.count == -1 || layer.mask.count >= shift) && OnLayer(&layer, position)) {
-            int pos = position.x + position.y * layer.width;
-            transparency -= 255 - layer.mask.grid[pos];
-            if (transparency <= 0)
-                return 0;
-        }
-    }
-
-    // Search Down
-    shift = 0;
-    for (i = index-1; i >= 0; i--) {
-        shift++;
-        layer = cr_config->world_layers[i];
-        if ((layer.mask.count == -1 || layer.mask.count >= shift) && OnLayer(&layer, position)) {
-            int pos = position.x + position.y * layer.width;
-            transparency -= 255 - layer.mask.grid[pos];
-            if (transparency <= 0)
-                return 0;
-        }
-    }
-
-    return (int) transparency;
-}
-void CRSetGridMask(uint8_t *grid, uint8_t tile, Vector2 position, int width, int height) {
-    int x = position.x;
-    int y = position.y;
-    if (x > width || y > height)
-        return;
-    printf("Set Tile: %d\n", tile);
-    grid[x + y * width] = tile;
-}
-void CRSetLayerMask(CRLayer *layer, uint8_t tile, Vector2 position) {
-    int width = layer->width;
-    int height = layer->height;
-    CRSetGridMask(layer->mask.grid, tile, position, width, height);
-}
-void CRSetWorldLayerMask(int index, uint8_t tile, Vector2 position) {
-    if (cr_config->world_layer_count < index)
-        return; // TODO return out of bounds error
-    CRSetLayerMask(&cr_config->world_layers[index], tile, position);
-}
-void CRSetUILayerMask(int index, uint8_t tile, Vector2 position) {
-    if (cr_config->ui_layer_count < index)
-        return; // TODO return out of bounds error
-    CRSetLayerMask(&cr_config->ui_layers[index], tile, position);
-}
-void CRSetWorldMask(uint8_t tile, Vector2 position) {
-    CRSetWorldLayerMask(0, tile, position);
-    // By default, the bottom-most layer masks all the layers above it
-    cr_config->world_layers[0].mask.flags = 0b10;
-}
-void CRSetUIMask(uint8_t tile, Vector2 position) {
-    CRSetUILayerMask(0, tile, position);
-    // By default, the bottom-most layer masks all the layers above it
-    cr_config->ui_layers[0].mask.flags = 0b10;
+    return mask_value;
 }
 
 // Entities
@@ -547,11 +638,37 @@ Vector2 CenterTextEx(Vector2 position, Font font, float tile_size, char *string_
     position.y += tile_size/2.0f - size.y/2.0f;
     return position;
 }
-void CRDrawTile(CRTile *tile, float tile_size, Vector2 position, uint8_t mask) {
-    if ((cr_config->tilemap_flags & 0b1) == 0) {
-        CRDrawTileChar(tile, 0, tile_size, position, mask);
+int CRCharToIndex(char *character) {
+    // Convert string to index
+    int assoc_index = character[0];
+    // use index to access value in array
+    CRCharIndexAssoc *assoc = &cr_config->char_index_assoc[assoc_index];
+    do {
+        // if the current value is the character we're looking for, replace it
+        if (cmpstr(assoc->character, character, 4)) {
+            break;
+        }
+        // otherwise, move on to the next 
+        assoc = assoc->next;
+    } while(assoc != 0);
+    if (assoc == 0)
+        return 0;
+    return assoc->index;
+}
+void CRDrawTile(CRTile *tile, uint8_t tilemap_flags, size_t index, float tile_size, Vector2 position, uint8_t mask) {
+    if ((tilemap_flags & 0b1) == 0) {
+        if (cr_config->font_count > index){
+            CRDrawTileChar(tile, &cr_config->fonts[index], tile_size, position, mask);
+        } else {
+            CRDrawTileChar(tile, 0, tile_size, position, mask);
+        }
     } else {
-        CRDrawTileImage(tile, 0, tile_size, position, mask);
+        int char_index = ((tilemap_flags & 0b10) >> 1);
+        if (cr_config->tilemap_count > index) {
+            CRDrawTileImage(tile, &cr_config->tilemaps[index], char_index, tile_size, position, mask);
+        } else {
+            CRDrawTileImage(tile, 0, char_index, tile_size, position, mask);
+        }
     }
 }
 void CRDrawTileChar(CRTile *tile, Font *font, float tile_size, Vector2 position, uint8_t mask) {
@@ -595,7 +712,7 @@ void CRDrawTileChar(CRTile *tile, Font *font, float tile_size, Vector2 position,
         DrawText(string_out, position.x, position.y, 24, text_color);
     }
 }
-void CRDrawTileImage(CRTile *tile, CRTilemap *tilemap, float tile_size, Vector2 position, uint8_t mask) {
+void CRDrawTileImage(CRTile *tile, CRTilemap *tilemap, int char_index, float tile_size, Vector2 position, uint8_t mask) {
     if (tile->index.i == 0)
         return;
 
@@ -626,10 +743,20 @@ void CRDrawTileImage(CRTile *tile, CRTilemap *tilemap, float tile_size, Vector2 
     DrawRectangleLines(x_pos, y_pos, tile_size, tile_size, RED);
 #endif
     Vector2 shift = tile->shift;
+    int index = tile->index.i;
+    if (char_index) {
+        index = CRCharToIndex(tile->index.c);
+    }
     if (tilemap != 0) {
         position = ShiftPosition(position, shift);
-        Rectangle rect = TileIndexRec(tilemap, tile->index.i);
-        DrawTextureRec(tilemap->texture, rect, position, foreground_color);
+        Rectangle rect = TileIndexRec(tilemap, index);
+        Rectangle dest;
+        dest.x = position.x;
+        dest.y = position.y;
+        dest.width = tile_size;
+        dest.height = tile_size;
+        Vector2 origin = {0.0,0.0};
+        DrawTexturePro(tilemap->texture, rect, dest, origin, 0.0f, foreground_color);
     } else {
         // TODO handle the problem of no tilemap
     }
@@ -639,8 +766,9 @@ void CRDrawLayer(CRLayer *layer) {
     for (int row = 0; row < layer->height; row++) {
         for (int col = 0; col < layer->width; col++) {
             CRTile *tile = &layer->grid[col + row * layer->width];
-            uint8_t mask = CRTileMask(layer->index, (Vector2){col, row});
-            CRDrawTile(tile, tile_size, (Vector2) {tile_size * col, tile_size * row}, mask);
+            uint8_t mask = CRMaskTile(layer, (Vector2){col, row}, 0b01);
+            CRDrawTile(tile, layer->flags, layer->tile_index, tile_size,
+                    (Vector2) {tile_size * col, tile_size * row}, mask);
         }
     }
     if (layer->entities.head == 0)
@@ -649,10 +777,10 @@ void CRDrawLayer(CRLayer *layer) {
     while (itr != 0) {
         CRTile *tile = &itr->tile;
         Vector2 position = itr->position;
-        uint8_t mask = CRTileMask(layer->index, position);
+        uint8_t mask = CRMaskTile(layer, position, 0b10);
         position.x *= tile_size;
         position.y *= tile_size;
-        CRDrawTile(tile, tile_size, position, mask);
+        CRDrawTile(tile, layer->flags, layer->tile_index, tile_size, position, mask);
         itr = itr->next;
     }
 }

@@ -37,27 +37,43 @@ void CRPreDraw() {
 }
 
 int main() {
+    // Startup
     CRInit();
 
+    // Load font/tilemap
     CRLoadTilemap("resources/tilemap.png", 8, 8);
     //CRLoadFont("resources/dejavu-sans.book.ttf");
+
+    // Set base world tiles
     CRSetWorldTileChar("A", (Vector2) {0,0});
     CRSetWorldTileChar("b", (Vector2) {1,0});
     CRSetWorldTileChar("B", (Vector2) {0,1});
-    //CRSetWorldMask(100, (Vector2) {1,1});
+    CRSetWorldMask((Vector2) {1,0}, 100);
 
+    // Use tilemap
+    CRSetWorldFlags(0b11);
+    // Associate character with tile index
+    CRSetCharAssoc("A", 1);
+    CRSetCharAssoc("B", 17);
+    CRSetCharAssoc("C", 20);
+    CRSetCharAssoc("b", 4);
+    CRSetCharAssoc("@", 5);
+
+    // Create a new world layer
     CRLayer layer = CRInitLayer();
     CRSetLayerTileChar(&layer, "C", (Vector2){1, 1});
-    //CRSetLayerMask(&layer, 100, (Vector2) {1,1});
     CRAddWorldLayer(1, layer);
+    CRSetLayerFlags(&layer, 0b00);
 
+    // Create player entity
     CREntity player = CRNewEntity(CRCTile("@"), (Vector2) {0, 0});
-    player.tile.shift = (Vector2) {0, -3};
+    //player.tile.shift = (Vector2) {0, -3};
     CRAddEntity(&player);
     movable = &player;
 
     CRLoop();
 
+    // Cleanup
     CRClose();
     return 0;
 }
