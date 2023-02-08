@@ -9,10 +9,7 @@ Classic roguelikes are defined by a focus on systems and simulation (including p
 
 CRGA is built to help developers spend as little time as possible on drawing things on screen, and as much time adding features to the game. It offers a reasonable interface and minimal code to get up and running. It is designed to be useful throughout the development process, from the very beginning when you just want a few lines to get things on screen, to the end where you want the API to be using your personal memory manager and custom pipelines.
 
-## Powered by Raylib 
-
-
-## Focused on Graphics
+## Focused on Graphics, Powered by Raylib
 CRGA is a graphics API, and does not seek to provide utilities for other parts of rogelike development like procedural generation, path-finding, or AI. However, CRGA's integration with Raylib means the extensive toolset accessible through CRGA. 2d and 3d rendering tools, sound, and input are all available through Raylib!
 
 ## Easy and Fast
