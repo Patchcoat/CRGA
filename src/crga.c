@@ -167,10 +167,18 @@ void CRLoop() {
         CRPostDraw();
     }
 }
+#ifdef _WIN32
+__weak void CRWorldDraw() {}
+__weak void CRUIDraw() {}
+__weak void CRPreDraw() {}
+__weak void CRPostDraw() {}
+#endif
+#ifdef __unix__
 void CRWorldDraw() {}
 void CRUIDraw() {}
 void CRPreDraw() {}
 void CRPostDraw() {}
+#endif
 
 // Font Loading
 inline void CRLoadFont(const char *font_path) {

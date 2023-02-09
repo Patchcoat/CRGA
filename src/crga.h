@@ -145,10 +145,18 @@ void CRUnloadMasks();
 
 // Loop
 void CRLoop();
-void CRWorldDraw() __attribute__((weak));
-void CRUIDraw() __attribute__((weak));
-void CRPreDraw() __attribute__((weak));
-void CRPostDraw() __attribute__((weak));
+#ifdef _WIN32
+void CRWorldDraw();
+void CRUIDraw();
+void CRPreDraw();
+void CRPostDraw();
+#endif
+#ifdef __unix__
+void CRWorldDraw() __attribute__ ((weak));
+void CRUIDraw() __attribute__ ((weak));
+void CRPreDraw() __attribute__ ((weak));
+void CRPostDraw() __attribute__ ((weak));
+#endif
 
 // Font Loading
 void CRLoadFont(const char *font_path);
