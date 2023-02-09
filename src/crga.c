@@ -21,6 +21,10 @@
 #include <string.h>
 
 CRConfig *cr_config;
+void (*CRWorldDraw)();
+void (*CRUIDraw)();
+void (*CRPreDraw)();
+void (*CRPostDraw)();
 
 // Init
 void CRInit() {
@@ -142,7 +146,7 @@ void CRUnloadMasks() {
 void CRLoop() {
     while (!WindowShouldClose()) {
 
-        if (CRUIDraw != 0)
+        if (CRPreDraw != 0)
             (*CRPreDraw)();
 
         BeginDrawing();
@@ -170,6 +174,18 @@ void CRLoop() {
         if (CRPostDraw != 0)
             (*CRPostDraw)();
     }
+}
+void CRSetWorldDraw(void (*new_func)()) {
+    CRWorldDraw = new_func;
+}
+void CRSetUIDraw(void (*new_func)()) {
+    CRUIDraw = new_func;
+}
+void CRSetPreDraw(void (*new_func)()) {
+    CRPreDraw = new_func;
+}
+void CRSetPostDraw(void (*new_func)()) {
+    CRPostDraw = new_func;
 }
 
 // Font Loading

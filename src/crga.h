@@ -145,10 +145,10 @@ void CRUnloadMasks();
 
 // Loop
 void CRLoop();
-void (*CRWorldDraw)();
-void (*CRUIDraw)();
-void (*CRPreDraw)();
-void (*CRPostDraw)();
+void CRSetWorldDraw(void (*newFunc)());
+void CRSetUIDraw(void (*newFunc)());
+void CRSetPreDraw(void (*newFunc)());
+void CRSetPostDraw(void (*newFunc)());
 
 // Font Loading
 void CRLoadFont(const char *font_path);

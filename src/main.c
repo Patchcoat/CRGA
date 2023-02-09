@@ -39,7 +39,7 @@ void PreDraw() {
 int main() {
     // Startup
     CRInit();
-    CRPreDraw = &PreDraw;
+    CRSetPreDraw(&PreDraw);
 
     // Load font/tilemap
     CRLoadTilemap("resources/tilemap.png", 8, 8);

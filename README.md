@@ -35,7 +35,7 @@ If you want the move the player around with the arrow keys, you can pull from ra
 
     CREntity *movable;
     
-    void CRPreDraw() {
+    void PreDraw() {
         if (IsKeyPressed(KEY_W)) {
             movable->position.y -= 1;
         } else if (IsKeyPressed(KEY_S)) {
@@ -50,6 +50,7 @@ If you want the move the player around with the arrow keys, you can pull from ra
     
     int main() {
         CRInit();
+        CRSetPreDraw(&PreDraw);
     
         CREntity player = CRNewEntity(CRCTile("@"), (Vector2) {0,0}); 
         CRAddEntity(player);
