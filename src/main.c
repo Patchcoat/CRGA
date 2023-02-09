@@ -23,7 +23,7 @@
 
 CREntity *movable;
 
-void CRPreDraw() {
+void PreDraw() {
     if (IsKeyPressed(KEY_W)) {
         movable->position.y -= 1;
     } else if (IsKeyPressed(KEY_S)) {
@@ -39,6 +39,7 @@ void CRPreDraw() {
 int main() {
     // Startup
     CRInit();
+    CRPreDraw = &PreDraw;
 
     // Load font/tilemap
     CRLoadTilemap("resources/tilemap.png", 8, 8);

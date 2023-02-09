@@ -142,7 +142,8 @@ void CRUnloadMasks() {
 void CRLoop() {
     while (!WindowShouldClose()) {
 
-        CRPreDraw();
+        if (CRUIDraw != 0)
+            (*CRPreDraw)();
 
         BeginDrawing();
 
@@ -153,32 +154,23 @@ void CRLoop() {
                 for (int i = 0; i < cr_config->world_layer_count; i++) {
                     CRDrawLayer(&cr_config->world_layers[i]);
                 }
-                CRWorldDraw();
+                if (CRWorldDraw != 0)
+                    (*CRWorldDraw)();
 
             EndMode2D();
 
             for (int i = 0; i < cr_config->ui_layer_count; i++) {
                 CRDrawLayer(&cr_config->ui_layers[i]);
             }
-            CRUIDraw();
+            if (CRUIDraw != 0)
+                (*CRUIDraw)();
 
         EndDrawing();
 
-        CRPostDraw();
+        if (CRPostDraw != 0)
+            (*CRPostDraw)();
     }
 }
-#ifdef _WIN32
-__weak void CRWorldDraw() {}
-__weak void CRUIDraw() {}
-__weak void CRPreDraw() {}
-__weak void CRPostDraw() {}
-#endif
-#ifdef __unix__
-void CRWorldDraw() {}
-void CRUIDraw() {}
-void CRPreDraw() {}
-void CRPostDraw() {}
-#endif
 
 // Font Loading
 inline void CRLoadFont(const char *font_path) {
