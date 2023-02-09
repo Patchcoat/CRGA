@@ -168,6 +168,8 @@ CRLayer CRNewLayer();
 void CRInitGrid(CRLayer *layer);// malloc
 void CRSetWorldLayer(int index, CRLayer layer);
 void CRSetUILayer(int index, CRLayer layer);
+void CRNewWorldLayer();
+void CRNewUILayer();
 void CRAddWorldLayer(int index, CRLayer layer);// malloc, realloc
 void CRAddUILayer(int index, CRLayer layer);// malloc, realloc
 void CRAppendWorldLayer(CRLayer layer);// malloc, realloc
@@ -191,6 +193,7 @@ void CRAddEntity(CREntity *entity);
 void CRAddEntityToLayer(CRLayer *layer, CREntity *entity);
 
 // Tiles
+CRTile CRDefaultTileConfig(int index);
 CRTile CRCTile(char *string);
 CRTile CRITile(int index);
 CRTile CRNewTileIndex(int index);
