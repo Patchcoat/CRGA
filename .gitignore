@@ -15,6 +15,8 @@ CTestTestfile.cmake
 *.sln
 _deps
 .cache
+*.tar.gz
+*.tar
 
 # vscode
 .vscode
@@ -24,6 +26,7 @@ tasks.json
 *.log
 *.tlog
 *.lastbuildstate
+*.zip
 
 # C
 crga
