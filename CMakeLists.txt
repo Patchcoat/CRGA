@@ -34,6 +34,7 @@ add_executable(${PROJECT_NAME} src/main.c ${SOURCES})
 #set(raylib_VERBOSE 1)
 target_compile_features(${PROJECT_NAME} PUBLIC c_std_99)
 target_link_libraries(${PROJECT_NAME} raylib)
+target_link_libraries(${PROJECT_NAME} notcurses)
 
 # Checks if OSX and links appropriate frameworks (Only required on MacOS)
 if (APPLE)

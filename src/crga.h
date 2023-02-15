@@ -23,6 +23,7 @@
 #include <raylib.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <notcurses/notcurses.h>
 
 #define GRID_OUTLINE 1
 #define TRANSPARENT (Color){0,0,0,0}
