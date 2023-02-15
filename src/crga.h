@@ -16,6 +16,10 @@
 #ifndef CRGA_HEADER
 #define CRGA_HEADER
 
+#ifndef TERMINAL
+#define TERMINAL 0
+#endif
+
 #include <raylib.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -163,9 +167,9 @@ void CRTileImage();
 void CRTileChar();
 
 // Layers
-CRLayer CRInitLayer();
 CRLayer CRNewLayer();
 void CRInitGrid(CRLayer *layer);// malloc
+CRLayer CRInitLayer();
 void CRSetWorldLayer(int index, CRLayer layer);
 void CRSetUILayer(int index, CRLayer layer);
 void CRNewWorldLayer();
@@ -196,7 +200,6 @@ void CRAddEntityToLayer(CRLayer *layer, CREntity *entity);
 CRTile CRDefaultTileConfig(int index);
 CRTile CRCTile(char *string);
 CRTile CRITile(int index);
-CRTile CRNewTileIndex(int index);
 void CRSetGridTile(CRTile *grid, CRTile tile, Vector2 position, int width, int height);
 void CRSetLayerTile(CRLayer *layer, CRTile tile, Vector2 position);
 void CRSetLayerTileChar(CRLayer *layer, char *string, Vector2 position);

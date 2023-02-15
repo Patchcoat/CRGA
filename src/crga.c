@@ -91,8 +91,12 @@ inline void CRInitCharIndexAssoc() {
     }
 }
 inline void CRInitWindow() {
+#if TERMINAL
+
+#else
     InitWindow(cr_config->window_width, cr_config->window_height, cr_config->title);
     SetTargetFPS(cr_config->fps);
+#endif
 }
 
 // Cleanup Functions
@@ -102,7 +106,11 @@ void CRClose() {
     CRUnloadCharIndexAssoc();
     CRUnloadLayers();
     CRUnloadMasks();
+#if TERMINAL
+
+#else
     CloseWindow();
+#endif
 }
 void CRUnloadLayers() {
     size_t count = cr_config->world_layer_count;
@@ -144,32 +152,52 @@ void CRUnloadMasks() {
 
 // Loop
 void CRLoop() {
-    while (!WindowShouldClose()) {
+#if TERMINAL
+    // TODO terminal exit when esc is pressed or window should close
+    while (true)
+#else
+    while (!WindowShouldClose())
+#endif
+        {
 
         if (CRPreDraw != 0)
             (*CRPreDraw)();
 
+#if TERMINAL
+        // TODO terminal begin drawing
+            // TODO terminal clear background
+            // TODO terminal begin 2d mode (draw with camera)
+#else
         BeginDrawing();
 
             ClearBackground(cr_config->background_color);
 
             BeginMode2D(cr_config->main_camera);
+#endif
 
                 for (int i = 0; i < cr_config->world_layer_count; i++) {
                     CRDrawLayer(&cr_config->world_layers[i]);
                 }
                 if (CRWorldDraw != 0)
                     (*CRWorldDraw)();
-
+#if TERMINAL
+            // TODO terminal end 2d mode
+            // TODO terminal, start UI mode
+#else
             EndMode2D();
+#endif
 
             for (int i = 0; i < cr_config->ui_layer_count; i++) {
                 CRDrawLayer(&cr_config->ui_layers[i]);
             }
             if (CRUIDraw != 0)
                 (*CRUIDraw)();
-
+#if TERMINAL
+        // TODO terminal, end UI mode
+        // TODO terminal end drawing
+#else
         EndDrawing();
+#endif
 
         if (CRPostDraw != 0)
             (*CRPostDraw)();
@@ -189,6 +217,7 @@ void CRSetPostDraw(void (*new_func)()) {
 }
 
 // Font Loading
+//TODO handle fonts within terminal rendering
 inline void CRLoadFont(const char *font_path) {
     CRLoadFontSize(font_path, 96);
 }
@@ -211,6 +240,7 @@ void CRLoadFontSize(const char *font_path, int size) {
 }
 
 // Tilemap Loading
+// TODO handle tilemap loading within terminal rendering
 void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height) {
     if (cr_config->tilemap_count == 255) {
         // there are too many tiles, exit out
@@ -268,11 +298,6 @@ void CRSetCharAssoc(char* character, int index) {
 }
 
 // Layers
-CRLayer CRInitLayer() {
-    CRLayer layer = CRNewLayer();
-    CRInitGrid(&layer);
-    return layer;
-}
 CRLayer CRNewLayer() {
     CRLayer layer;
     layer.grid = 0;
@@ -295,6 +320,11 @@ void CRInitGrid(CRLayer *layer) {
     zero.index.i = 0;
     for (int i = 0; i < size; i++)
         layer->grid[i] = zero;
+}
+CRLayer CRInitLayer() {
+    CRLayer layer = CRNewLayer();
+    CRInitGrid(&layer);
+    return layer;
 }
 void CRSetWorldLayer(int index, CRLayer layer) {
     if (cr_config->world_layer_count < index)
@@ -477,8 +507,11 @@ void CRAddEntity(CREntity *entity) {
     CRAddEntityToLayer(0, entity);
 }
 void CRAddEntityToLayer(CRLayer *layer, CREntity *entity) {
-    if (layer == 0)
+    if (layer == 0) {
+        if (cr_config->world_layer_count == 0)
+            return;
         layer = &cr_config->world_layers[0];
+    }
     // Remove entity from its current position
     CREntity *next = entity->next;
     CREntity *prev = entity->prev;
@@ -596,7 +629,38 @@ int CRCharToIndex(char *character) {
         return 0;
     return assoc->index;
 }
+int PreDrawTile(CRTileIndex index, uint8_t mask, Color *foreground_color, Color *background_color, char string_out[5]) {
+    if (index.i == 0)
+        return 1;
+
+    float mask_multiplier = (float) mask/255.0f;
+
+    float transparency = background_color->a;
+    transparency *= mask_multiplier;
+    background_color->a = transparency;
+
+    transparency = foreground_color->a;
+    transparency *= mask_multiplier;
+    foreground_color->a = transparency;
+
+    if (foreground_color->a == 0 && foreground_color->a == 0)
+        return 1;
+
+    for (int i = 0; i <= 4; i++)
+        string_out[i] = index.c[i];
+
+    return 0;
+}
 void CRDrawTile(CRTile *tile, uint8_t tilemap_flags, size_t index, float tile_size, Vector2 position, uint8_t mask) {
+#if TERMINAL
+    Color tile_color = tile->background;
+    Color text_color = tile->foreground;
+    char string_out[5];
+    if (PreDrawTile(tile->index, mask, &text_color, &tile_color, string_out))
+        return;
+    
+    //TODO Draw the tile using the notcurses
+#else
     if ((tilemap_flags & 0b1) == 0) {
         if (cr_config->font_count > index){
             CRDrawTileChar(tile, &cr_config->fonts[index], tile_size, position, mask);
@@ -611,36 +675,18 @@ void CRDrawTile(CRTile *tile, uint8_t tilemap_flags, size_t index, float tile_si
             CRDrawTileImage(tile, 0, char_index, tile_size, position, mask);
         }
     }
+#endif
 }
 void CRDrawTileChar(CRTile *tile, Font *font, float tile_size, Vector2 position, uint8_t mask) {
-    if (tile->index.i == 0)
-        return;
-
     Color tile_color = tile->background;
     Color text_color = tile->foreground;
-    float mask_multiplier = (float) mask/255.0f;
-
-    float transparency = tile_color.a;
-    transparency *= mask_multiplier;
-    tile_color.a = transparency;
-
-    transparency = text_color.a;
-    transparency *= mask_multiplier;
-    text_color.a = transparency;
-
-    if (tile_color.a == 0 && text_color.a == 0)
+    char string_out[5];
+    if (PreDrawTile(tile->index, mask, &text_color, &tile_color, string_out))
         return;
 
-    char string_out[5];
-    for (int i = 0; i <= 4; i++)
-        string_out[i] = tile->index.c[i];
-
-    float x_pos = position.x;
-    float y_pos = position.y;
-
-    DrawRectangle(x_pos, y_pos, tile_size, tile_size, tile_color);
+    DrawRectangle(position.x, position.y, tile_size, tile_size, tile_color);
 #if GRID_OUTLINE
-    DrawRectangleLines(x_pos, y_pos, tile_size, tile_size, RED);
+    DrawRectangleLines(position.x, position.y, tile_size, tile_size, RED);
 #endif
     Vector2 shift = tile->shift;
     if (font != 0) {
@@ -654,34 +700,15 @@ void CRDrawTileChar(CRTile *tile, Font *font, float tile_size, Vector2 position,
     }
 }
 void CRDrawTileImage(CRTile *tile, CRTilemap *tilemap, int char_index, float tile_size, Vector2 position, uint8_t mask) {
-    if (tile->index.i == 0)
-        return;
-
     Color tile_color = tile->background;
     Color foreground_color = tile->foreground;
-    float mask_multiplier = (float) mask/255.0f;
-
-    float transparency = tile_color.a;
-    transparency *= mask_multiplier;
-    tile_color.a = transparency;
-
-    transparency = foreground_color.a;
-    transparency *= mask_multiplier;
-    foreground_color.a = transparency;
-
-    if (tile_color.a == 0 && foreground_color.a == 0)
+    char string_out[5];
+    if (PreDrawTile(tile->index, mask, &foreground_color, &tile_color, string_out))
         return;
 
-    char string_out[5];
-    for (int i = 0; i <= 4; i++)
-        string_out[i] = tile->index.c[i];
-
-    float x_pos = position.x;
-    float y_pos = position.y;
-
-    DrawRectangle(x_pos, y_pos, tile_size, tile_size, tile->background);
+    DrawRectangle(position.x, position.y, tile_size, tile_size, tile->background);
 #if GRID_OUTLINE
-    DrawRectangleLines(x_pos, y_pos, tile_size, tile_size, RED);
+    DrawRectangleLines(position.x, position.y, tile_size, tile_size, RED);
 #endif
     Vector2 shift = tile->shift;
     int index = tile->index.i;
