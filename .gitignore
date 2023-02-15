@@ -17,6 +17,7 @@ _deps
 .cache
 *.tar.gz
 *.tar
+build
 
 # vscode
 .vscode
