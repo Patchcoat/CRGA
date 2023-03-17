@@ -23,10 +23,10 @@ if (NOT raylib_FOUND) # If there's none, fetch and build raylib
   endif()
 endif()
 
-# Our Project
+# The Project
 if (UNIX)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/DEBUG)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/LIBRARY)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/DEBUG)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/LIBRARY)
 endif()
 set(SOURCES src/crga.c src/crga.h src/crgahelper.h src/termdraw.h)
 add_executable(${PROJECT_NAME} src/main.c ${SOURCES})
