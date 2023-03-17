@@ -24,6 +24,21 @@
 CREntity *movable;
 
 void PreDraw() {
+#if TERMINAL
+    if (CRIsTerminalInput(27)) {
+        CRCloseTerminal();
+    }
+    if (CRIsTerminalInput('w')) {
+        movable->position.x -= 1;
+    } else if (CRIsTerminalInput('s')) {
+        movable->position.x += 1;
+    }
+    if (CRIsTerminalInput('a')) {
+        movable->position.y -= 1;
+    } else if (CRIsTerminalInput('d')) {
+        movable->position.y += 1;
+    }
+#else
     if (IsKeyPressed(KEY_W)) {
         movable->position.y -= 1;
     } else if (IsKeyPressed(KEY_S)) {
@@ -34,6 +49,7 @@ void PreDraw() {
     } else if (IsKeyPressed(KEY_D)) {
         movable->position.x += 1;
     }
+#endif
 }
 
 int main() {
@@ -42,7 +58,7 @@ int main() {
     CRSetPreDraw(&PreDraw);
 
     // Load font/tilemap
-    CRLoadTilemap("resources/tilemap.png", 8, 8);
+    //CRLoadTilemap("resources/tilemap.png", 8, 8);
     //CRLoadFont("resources/dejavu-sans.book.ttf");
 
     // Set base world tiles
@@ -52,13 +68,15 @@ int main() {
     CRSetWorldMask((Vector2) {1,0}, 100);
 
     // Use tilemap
-    CRSetWorldFlags(0b11);
+    CRSetWorldFlags(0b10);
     // Associate character with tile index
     CRSetCharAssoc("A", 1);
     CRSetCharAssoc("B", 17);
     CRSetCharAssoc("C", 20);
     CRSetCharAssoc("b", 4);
     CRSetCharAssoc("@", 5);
+
+    CRDrawUICharRectangle((Vector2){3,3}, (Vector2){10,10}, "+", "=", "a", "|", "b", "=", "c", "|", " ");
 
     // Create a new world layer
     CRLayer layer = CRInitLayer();

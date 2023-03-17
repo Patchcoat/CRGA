@@ -17,14 +17,23 @@
  */
 #include "crga.h"
 #include "crgahelper.h"
+#include "termdraw.h"
 #include <stdio.h>
 #include <string.h>
+#include <ncurses.h>
 
 CRConfig *cr_config;
 void (*CRWorldDraw)();
 void (*CRUIDraw)();
 void (*CRPreDraw)();
 void (*CRPostDraw)();
+
+#if TERMINAL
+int TerminalShouldClose();
+int camera_shift = 0;
+int terminal_should_close = 0;
+#endif
+
 
 // Init
 void CRInit() {
@@ -33,7 +42,11 @@ void CRInit() {
     CRSetConfig(config);
     CRInitCharIndexAssoc();
     CRInitWorld();
+    CRInitUI();
     CRInitWindow();
+#if TERMINAL
+    CRInitTerm();
+#endif
 }
 void CRInitConfig(CRConfig *config) {
     config->window_width = 800;
@@ -107,7 +120,7 @@ void CRClose() {
     CRUnloadLayers();
     CRUnloadMasks();
 #if TERMINAL
-
+    CRStopTerm();
 #else
     CloseWindow();
 #endif
@@ -154,7 +167,7 @@ void CRUnloadMasks() {
 void CRLoop() {
 #if TERMINAL
     // TODO terminal exit when esc is pressed or window should close
-    while (true)
+    while (!TerminalShouldClose())
 #else
     while (!WindowShouldClose())
 #endif
@@ -165,8 +178,8 @@ void CRLoop() {
 
 #if TERMINAL
         // TODO terminal begin drawing
-            // TODO terminal clear background
-            // TODO terminal begin 2d mode (draw with camera)
+        CRBeginTerminalCamera();
+            clear();
 #else
         BeginDrawing();
 
@@ -181,8 +194,8 @@ void CRLoop() {
                 if (CRWorldDraw != 0)
                     (*CRWorldDraw)();
 #if TERMINAL
-            // TODO terminal end 2d mode
-            // TODO terminal, start UI mode
+            CREndTerminalCamera();
+            refresh();
 #else
             EndMode2D();
 #endif
@@ -195,6 +208,7 @@ void CRLoop() {
 #if TERMINAL
         // TODO terminal, end UI mode
         // TODO terminal end drawing
+        refresh();
 #else
         EndDrawing();
 #endif
@@ -466,6 +480,9 @@ void CRSetUIMask(Vector2 position, uint8_t mask_value) {
 uint8_t CRMaskTile(CRLayer *layer, Vector2 position, uint8_t flags) {
     // Position is the position on the layer
     // bit 0 of flags indicates of it's a grid, bit 1 indicates if it's an entity
+    if (position.x < 0 || position.x > layer->width || position.y < 0 || position.y > layer->height) {
+        return 255;
+    }
     CRTile *tile = &layer->grid[(int) (position.x + position.y * layer->width)];
     if (tile->index.i == 0)
         return 255;
@@ -659,7 +676,7 @@ void CRDrawTile(CRTile *tile, uint8_t tilemap_flags, size_t index, float tile_si
     if (PreDrawTile(tile->index, mask, &text_color, &tile_color, string_out))
         return;
     
-    //TODO Draw the tile using the notcurses
+    CRTermDrawTile(tile, position, mask);
 #else
     if ((tilemap_flags & 0b1) == 0) {
         if (cr_config->font_count > index){
@@ -735,8 +752,13 @@ void CRDrawLayer(CRLayer *layer) {
         for (int col = 0; col < layer->width; col++) {
             CRTile *tile = &layer->grid[col + row * layer->width];
             uint8_t mask = CRMaskTile(layer, (Vector2){col, row}, 0b01);
+#if TERMINAL
+            CRDrawTile(tile, layer->flags, layer->tile_index, tile_size,
+                    (Vector2) {col, row}, mask);
+#else
             CRDrawTile(tile, layer->flags, layer->tile_index, tile_size,
                     (Vector2) {tile_size * col, tile_size * row}, mask);
+#endif
         }
     }
     if (layer->entities.head == 0)
@@ -746,8 +768,11 @@ void CRDrawLayer(CRLayer *layer) {
         CRTile *tile = &itr->tile;
         Vector2 position = itr->position;
         uint8_t mask = CRMaskTile(layer, position, 0b10);
+#if TERMINAL
+#else
         position.x *= tile_size;
         position.y *= tile_size;
+#endif
         CRDrawTile(tile, layer->flags, layer->tile_index, tile_size, position, mask);
         itr = itr->next;
     }
@@ -775,3 +800,150 @@ void CRShiftCameraOffset(Camera2D *camera, Vector2 offset) {
         camera->offset.y + offset.y * cr_config->tile_size};
     camera->offset = offset_out;
 }
+
+// Shape functions
+void CRDrawCharRectangle(CRLayer *layer, Vector2 top_left, Vector2 bottom_right, char *tl, char *t, char *tr, char *r, char *br, char *b, char *bl, char *l, char *fill) {
+    int i, j;
+    int width = bottom_right.x - top_left.x + 1;
+    int height = bottom_right.y - top_left.y + 1;
+    for (i = 0; i < height; i++) {
+        for (j = 0; j < width; j++) {
+            if (i == 0 && j == 0) {// top left
+                CRSetLayerTileChar(layer, tl, top_left);
+            } else if (i == 0 && j == width-1) {// top right
+                Vector2 position = bottom_right;
+                position.y = top_left.y;
+                CRSetLayerTileChar(layer, tr, position);
+            } else if (i == height-1 && j == 0) {// bottom left
+                Vector2 position = bottom_right;
+                position.x = top_left.x;
+                CRSetLayerTileChar(layer, bl, position);
+            } else if (i == height-1 && j == width-1) {// bottom right
+                Vector2 position = bottom_right;
+                CRSetLayerTileChar(layer, br, position);
+            } else if (i == 0 || i == height-1 || j == 0 || j == width-1) {
+                Vector2 position = top_left;
+                position.y += i;
+                position.x += j;
+                if (i == 0)
+                    CRSetLayerTileChar(layer, t, position);
+                else if (i == height-1)
+                    CRSetLayerTileChar(layer, b, position);
+                else if (j == 0)
+                    CRSetLayerTileChar(layer, l, position);
+                else
+                    CRSetLayerTileChar(layer, r, position);
+            }
+        }
+    }
+}
+void CRDrawTileRectangle(CRLayer *layer, Vector2 top_left, Vector2 bottom_right, CRTile tl, CRTile t, CRTile tr, CRTile r, CRTile br, CRTile b, CRTile bl, CRTile l, CRTile fill) {
+    int i, j;
+    int width = bottom_right.x - top_left.x + 1;
+    int height = bottom_right.y - top_left.y + 1;
+    for (i = 0; i < height; i++) {
+        for (j = 0; j < width; j++) {
+            if (i == 0 && j == 0) {// top left
+                CRSetLayerTile(layer, tl, top_left);
+            } else if (i == 0 && j == width-1) {// top right
+                Vector2 position = bottom_right;
+                position.y = top_left.y;
+                CRSetLayerTile(layer, tr, position);
+            } else if (i == height-1 && j == 0) {// bottom left
+                Vector2 position = bottom_right;
+                position.x = top_left.x;
+                CRSetLayerTile(layer, bl, position);
+            } else if (i == height-1 && j == width-1) {// bottom right
+                Vector2 position = bottom_right;
+                CRSetLayerTile(layer, br, position);
+            } else if (i == 0 || i == height-1 || j == 0 || j == width-1) {
+                Vector2 position = top_left;
+                position.y += i;
+                position.x += j;
+                if (i == 0)
+                    CRSetLayerTile(layer, t, position);
+                else if (i == height-1)
+                    CRSetLayerTile(layer, b, position);
+                else if (j == 0)
+                    CRSetLayerTile(layer, l, position);
+                else
+                    CRSetLayerTile(layer, r, position);
+            }
+        }
+    }
+}
+void CRDrawUICharRectangle(Vector2 top_left, Vector2 bottom_right, char *tl, char *t, char *tr, char *r, char *br, char *b, char *bl, char *l, char *fill) {
+    CRDrawCharRectangle(&cr_config->ui_layers[0], top_left, bottom_right, tl, t, tr, r, br, b, bl, l, fill);
+}
+void CRDrawUITileRectangle(Vector2 top_left, Vector2 bottom_right, CRTile tl, CRTile t, CRTile tr, CRTile r, CRTile br, CRTile b, CRTile bl, CRTile l, CRTile fill) {
+    CRDrawTileRectangle(&cr_config->ui_layers[0], top_left, bottom_right, tl, t, tr, r, br, b, bl, l, fill);
+}
+
+// Text Rendering
+void CRDrawTextString(char *text, Color tile_color, Color text_color, Font *font, Vector2 start, float tile_size, int wrap_width, int wrap_height, int word_wrap, int per_cell) {
+#if TERMINAL
+
+#else
+    if (per_cell){
+    } else {
+    }
+#endif
+}
+
+// Terminal rendering
+#if TERMINAL
+int close_terminal = 0;
+
+void CRInitTerm() {
+    initscr();
+    cbreak();
+    noecho();
+    nodelay(stdscr, TRUE);
+    curs_set(0);
+}
+
+void CRStopTerm() {
+    curs_set(1);
+    endwin();
+}
+
+void CRBeginTerminalCamera() {
+    camera_shift = 1;
+}
+void CREndTerminalCamera() {
+    camera_shift = 0;
+}
+
+int CRIsTerminalInput(int c) {
+    int ch = getch();
+    if (ch == c) {
+        return true;
+    } else if (ch == ERR) {
+        return false;
+    }
+    ungetch(ch);
+    return false;
+}
+
+void CRTermDrawTile(CRTile *tile, Vector2 position, uint8_t mask) {
+    if (tile->foreground.a == 0 && tile->background.a == 0)
+        return;
+    if (camera_shift) {
+        Camera2D *camera = CRGetMainCamera();
+        position.x += camera->target.x;
+        position.y += camera->target.y;
+        position.x += camera->offset.x;
+        position.y += camera->offset.y;
+    }
+    move(position.x, position.y);
+    addch(tile->index.c[0]);
+}
+
+void CRCloseTerminal() {
+    close_terminal = 1;
+}
+
+int TerminalShouldClose() {
+    return close_terminal ? 1 : 0;
+}
+#endif

@@ -23,7 +23,10 @@
 #include <raylib.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <notcurses/notcurses.h>
+#if TERMINAL
+//#include <notcurses/notcurses.h>
+#include <ncurses.h>
+#endif
 
 #define GRID_OUTLINE 1
 #define TRANSPARENT (Color){0,0,0,0}
@@ -227,5 +230,26 @@ void CRSetCameraTarget(Camera2D *camera, Vector2 target);
 void CRSetCameraOffset(Camera2D *camera, Vector2 offset);
 void CRShiftCameraTarget(Camera2D *camera, Vector2 target);
 void CRShiftCameraOffset(Camera2D *camera, Vector2 offset);
+
+// Shape functions
+void CRDrawCharRectangle(CRLayer *layer, Vector2 top_left, Vector2 bottom_right, 
+        char *tl, char *t, char *tr, char *r, char *br, char *b, char *bl, char *l, char *fill);
+void CRDrawUICharRectangle(Vector2 top_left, Vector2 bottom_right, 
+        char *tl, char *t, char *tr, char *r, char *br, char *b, char *bl, char *l, char *fill);
+void CRDrawTileRectangle(CRLayer *layer, Vector2 top_left, Vector2 bottom_right,
+        CRTile tl, CRTile t, CRTile tr, CRTile r, CRTile br, CRTile b, CRTile bl, CRTile l, CRTile fill);
+void CRDrawUITileRectangle(Vector2 top_left, Vector2 bottom_right, 
+        CRTile tl, CRTile t, CRTile tr, CRTile r, CRTile br, CRTile b, CRTile bl, CRTile l, CRTile fill);
+
+// Terminal rendering
+#if TERMINAL
+void CRInitTerm();
+void CRStopTerm();
+void CRBeginTerminalCamera();
+void CREndTerminalCamera();
+int CRIsTerminalInput(int c);
+void CRTermDrawTile(CRTile *tile, Vector2 position, uint8_t mask);
+void CRCloseTerminal();
+#endif
 
 #endif

@@ -22,6 +22,24 @@
 #include "crga.h"
 #include <raylib.h>
 
+int get_utf8_char_length(char *string) {
+    char c = *string;
+    if (((c >> 8) & 1) == 0)
+        return 1;
+    int char_length = -1;
+    int char_flag = 1;
+    int shift = 8;
+    while(char_flag == 1) {
+        char_flag = (c >> shift) & 1;
+        shift--;
+        char_length++;
+    }
+    return char_length;
+}
+char *get_next_utf8_char(char *string) {
+    return string + get_utf8_char_length(string);
+}
+
 int cmpstr(char *s1, char *s2, size_t size) {
     for (int i = 0; i < size; i++) {
         if (s1[i] != s2[i])
