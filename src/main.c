@@ -24,30 +24,56 @@
 CREntity *movable;
 
 void PreDraw() {
+    Vector2 camera_offset = CRCameraOffset();
+    Vector2 size = CRScreenSize();
 #if TERMINAL
     if (CRIsTerminalInput(27)) {
         CRCloseTerminal();
     }
     if (CRIsTerminalInput('w')) {
         movable->position.x -= 1;
+        if (movable->position.y < -camera_offset.y) {
+            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){0,1});
+        }
     } else if (CRIsTerminalInput('s')) {
         movable->position.x += 1;
+        if (movable->position.y >= -camera_offset.y + size.y) {
+            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){0,-1});
+        }
     }
     if (CRIsTerminalInput('a')) {
         movable->position.y -= 1;
+        if (movable->position.x < -camera_offset.x) {
+            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){1,0});
+        }
     } else if (CRIsTerminalInput('d')) {
         movable->position.y += 1;
+        if (movable->position.x >= -camera_offset.x + size.x) {
+            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){-1,0});
+        }
     }
 #else
     if (IsKeyPressed(KEY_W)) {
         movable->position.y -= 1;
+        if (movable->position.y < -camera_offset.y) {
+            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){0,1});
+        }
     } else if (IsKeyPressed(KEY_S)) {
         movable->position.y += 1;
+        if (movable->position.y >= -camera_offset.y + size.y) {
+            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){0,-1});
+        }
     }
     if (IsKeyPressed(KEY_A)) {
         movable->position.x -= 1;
+        if (movable->position.x < -camera_offset.x) {
+            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){1,0});
+        }
     } else if (IsKeyPressed(KEY_D)) {
         movable->position.x += 1;
+        if (movable->position.x >= -camera_offset.x + size.x) {
+            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){-1,0});
+        }
     }
 #endif
 }
@@ -59,7 +85,7 @@ int main() {
 
     // Load font/tilemap
     //CRLoadTilemap("resources/tilemap.png", 8, 8);
-    //CRLoadFont("resources/dejavu-sans.book.ttf");
+    CRLoadFont("resources/dejavu-sans.book.ttf");
 
     // Set base world tiles
     CRSetWorldTileChar("A", (Vector2) {0,0});
@@ -76,7 +102,7 @@ int main() {
     CRSetCharAssoc("b", 4);
     CRSetCharAssoc("@", 5);
 
-    CRDrawUICharRectangle((Vector2){3,3}, (Vector2){10,10}, "+", "=", "a", "|", "b", "=", "c", "|", " ");
+    //CRDrawUICharRectangle((Vector2){3,3}, (Vector2){10,10}, "+", "=", "a", "|", "b", "=", "c", "|", " ");
 
     // Create a new world layer
     CRLayer layer = CRInitLayer();

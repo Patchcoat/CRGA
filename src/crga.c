@@ -49,8 +49,8 @@ void CRInit() {
 #endif
 }
 void CRInitConfig(CRConfig *config) {
-    config->window_width = 800;
-    config->window_height = 450;
+    config->window_width = 100;
+    config->window_height = 100;
     config->fps = 60;
     config->title = "CRGA Basic Window";
 
@@ -880,14 +880,39 @@ void CRDrawUITileRectangle(Vector2 top_left, Vector2 bottom_right, CRTile tl, CR
 }
 
 // Text Rendering
-void CRDrawTextString(char *text, Color tile_color, Color text_color, Font *font, Vector2 start, float tile_size, int wrap_width, int wrap_height, int word_wrap, int per_cell) {
+void CRDrawTextString(CRLayer *layer, char *text, Color tile_color, Color text_color, Font *font, Vector2 start, float tile_size, int width, int height, int word_wrap) {
+    Rectangle rec;
+    rec.x = start.x;
+    rec.y = start.y;
+    rec.width = width;
+    rec.height = height;
 #if TERMINAL
 
 #else
-    if (per_cell){
-    } else {
-    }
+    DrawTextBoxed(font, layer, text, rec, 24, 2.0f, word_wrap, text_color);
 #endif
+}
+
+// Window Information
+Vector2 CRCameraOffset() {
+    Camera2D *camera = CRGetMainCamera();
+    Vector2 camera_offset = camera->offset;
+    camera_offset.x /= cr_config->tile_size;
+    camera_offset.y /= cr_config->tile_size;
+    return camera_offset;
+}
+Vector2 CRScreenSize() {
+    Vector2 size;
+
+#if TERMINAL
+    size.x = COLUMNS;
+    size.y = LINES;
+#else
+    size.x = GetRenderWidth() / cr_config->tile_size;
+    size.y = GetRenderHeight() / cr_config->tile_size;
+#endif
+
+    return size;
 }
 
 // Terminal rendering

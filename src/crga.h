@@ -241,6 +241,10 @@ void CRDrawTileRectangle(CRLayer *layer, Vector2 top_left, Vector2 bottom_right,
 void CRDrawUITileRectangle(Vector2 top_left, Vector2 bottom_right, 
         CRTile tl, CRTile t, CRTile tr, CRTile r, CRTile br, CRTile b, CRTile bl, CRTile l, CRTile fill);
 
+// Window Information
+Vector2 CRCameraOffset();
+Vector2 CRScreenSize();
+
 // Terminal rendering
 #if TERMINAL
 void CRInitTerm();
