@@ -24,8 +24,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #if TERMINAL
-//#include <notcurses/notcurses.h>
+#if _WIN32
+//#include <curses.h>
+#elif UNIX
 #include <ncurses.h>
+#endif
 #endif
 
 #define GRID_OUTLINE 1

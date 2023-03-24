@@ -20,7 +20,6 @@
 #include "termdraw.h"
 #include <stdio.h>
 #include <string.h>
-#include <ncurses.h>
 
 CRConfig *cr_config;
 void (*CRWorldDraw)();
@@ -32,6 +31,11 @@ void (*CRPostDraw)();
 int TerminalShouldClose();
 int camera_shift = 0;
 int terminal_should_close = 0;
+#if UNIX
+#include <ncurses.h>
+#elif _WIN32
+//#include <curses.h>
+#endif
 #endif
 
 
