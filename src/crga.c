@@ -49,8 +49,8 @@ void CRInit() {
 #endif
 }
 void CRInitConfig(CRConfig *config) {
-    config->window_width = 100;
-    config->window_height = 100;
+    config->window_width = 800;
+    config->window_height = 800;
     config->fps = 60;
     config->title = "CRGA Basic Window";
 
