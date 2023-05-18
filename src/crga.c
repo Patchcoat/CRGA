@@ -92,12 +92,8 @@ inline void CRInitCharIndexAssoc() {
     }
 }
 inline void CRInitWindow() {
-#if TERMINAL
-
-#else
     InitWindow(cr_config->window_width, cr_config->window_height, cr_config->title);
     SetTargetFPS(cr_config->fps);
-#endif
 }
 
 // Cleanup Functions
@@ -107,11 +103,7 @@ void CRClose() {
     CRUnloadCharIndexAssoc();
     CRUnloadLayers();
     CRUnloadMasks();
-#if TERMINAL
-    CRStopTerm();
-#else
     CloseWindow();
-#endif
 }
 void CRUnloadLayers() {
     size_t count = cr_config->world_layer_count;
@@ -153,40 +145,24 @@ void CRUnloadMasks() {
 
 // Loop
 void CRLoop() {
-#if TERMINAL
-    // TODO terminal exit when esc is pressed or window should close
-    while (!TerminalShouldClose())
-#else
     while (!WindowShouldClose())
-#endif
         {
 
         if (CRPreDraw != 0)
             (*CRPreDraw)();
 
-#if TERMINAL
-        // TODO terminal begin drawing
-        CRBeginTerminalCamera();
-            clear();
-#else
         BeginDrawing();
 
             ClearBackground(cr_config->background_color);
 
             BeginMode2D(cr_config->main_camera);
-#endif
 
                 for (int i = 0; i < cr_config->world_layer_count; i++) {
                     CRDrawLayer(&cr_config->world_layers[i]);
                 }
                 if (CRWorldDraw != 0)
                     (*CRWorldDraw)();
-#if TERMINAL
-            CREndTerminalCamera();
-            refresh();
-#else
             EndMode2D();
-#endif
 
             DrawFPS(0,0);
             for (int i = 0; i < cr_config->ui_layer_count; i++) {
@@ -194,13 +170,7 @@ void CRLoop() {
             }
             if (CRUIDraw != 0)
                 (*CRUIDraw)();
-#if TERMINAL
-        // TODO terminal, end UI mode
-        // TODO terminal end drawing
-        refresh();
-#else
         EndDrawing();
-#endif
 
         if (CRPostDraw != 0)
             (*CRPostDraw)();
@@ -656,15 +626,6 @@ int PreDrawTile(CRTileIndex index, uint8_t mask, Color *foreground_color, Color 
     return 0;
 }
 void CRDrawTile(CRTile *tile, uint8_t tilemap_flags, size_t index, float tile_size, Vector2 position, uint8_t mask) {
-#if TERMINAL
-    Color tile_color = tile->background;
-    Color text_color = tile->foreground;
-    char string_out[5];
-    if (PreDrawTile(tile->index, mask, &text_color, &tile_color, string_out))
-        return;
-    
-    CRTermDrawTile(tile, position, mask);
-#else
     if ((tilemap_flags & 0b1) == 0) {
         if (cr_config->font_count > index){
             CRDrawTileChar(tile, &cr_config->fonts[index], tile_size, position, mask);
@@ -679,7 +640,6 @@ void CRDrawTile(CRTile *tile, uint8_t tilemap_flags, size_t index, float tile_si
             CRDrawTileImage(tile, 0, char_index, tile_size, position, mask);
         }
     }
-#endif
 }
 void CRDrawTileChar(CRTile *tile, Font *font, float tile_size, Vector2 position, uint8_t mask) {
     Color tile_color = tile->background;
@@ -739,13 +699,8 @@ void CRDrawLayer(CRLayer *layer) {
         for (int col = 0; col < layer->width; col++) {
             CRTile *tile = &layer->grid[col + row * layer->width];
             uint8_t mask = CRMaskTile(layer, (Vector2){col, row}, 0b01);
-#if TERMINAL
-            CRDrawTile(tile, layer->flags, layer->tile_index, tile_size,
-                    (Vector2) {col, row}, mask);
-#else
             CRDrawTile(tile, layer->flags, layer->tile_index, tile_size,
                     (Vector2) {tile_size * col, tile_size * row}, mask);
-#endif
         }
     }
     if (layer->entities.head == 0)
@@ -755,11 +710,8 @@ void CRDrawLayer(CRLayer *layer) {
         CRTile *tile = &itr->tile;
         Vector2 position = itr->position;
         uint8_t mask = CRMaskTile(layer, position, 0b10);
-#if TERMINAL
-#else
         position.x *= tile_size;
         position.y *= tile_size;
-#endif
         CRDrawTile(tile, layer->flags, layer->tile_index, tile_size, position, mask);
         itr = itr->next;
     }
@@ -783,13 +735,8 @@ void CRShiftCameraTarget(Camera2D *camera, Vector2 target) {
     camera->target = target_out;
 }
 void CRShiftCameraOffset(Camera2D *camera, Vector2 offset) {
-#if TERMINAL
-    Vector2 offset_out = (Vector2) {camera->offset.x + offset.x, 
-        camera->offset.y + offset.y};
-#else
     Vector2 offset_out = (Vector2) {camera->offset.x + offset.x * cr_config->tile_size, 
         camera->offset.y + offset.y * cr_config->tile_size};
-#endif
     camera->offset = offset_out;
 }
 
@@ -878,11 +825,7 @@ void CRDrawTextString(CRLayer *layer, char *text, Color tile_color, Color text_c
     rec.y = start.y;
     rec.width = width;
     rec.height = height;
-#if TERMINAL
-
-#else
     DrawTextBoxed(font, layer, text, rec, 24, 2.0f, word_wrap, text_color);
-#endif
 }
 
 // Window Information
@@ -896,13 +839,8 @@ Vector2 CRCameraOffset() {
 Vector2 CRScreenSize() {
     Vector2 size;
 
-#if TERMINAL
-    size.x = COLS;
-    size.y = LINES;
-#else
     size.x = GetRenderWidth() / cr_config->tile_size;
     size.y = GetRenderHeight() / cr_config->tile_size;
-#endif
 
     return size;
 }

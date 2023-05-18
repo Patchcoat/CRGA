@@ -26,33 +26,6 @@ CREntity *movable;
 void PreDraw() {
     Vector2 camera_offset = CRCameraOffset();
     Vector2 size = CRScreenSize();
-#if TERMINAL
-    if (CRIsTerminalInput(27)) {
-        CRCloseTerminal();
-    }
-    if (CRIsTerminalInput('w')) {
-        movable->position.y -= 1;
-        if (movable->position.y < -camera_offset.y) {
-            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){0,1});
-        }
-    } else if (CRIsTerminalInput('s')) {
-        movable->position.y += 1;
-        if (movable->position.y >= -camera_offset.y + size.y) {
-            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){0,-1});
-        }
-    }
-    if (CRIsTerminalInput('a')) {
-        movable->position.x -= 1;
-        if (movable->position.x < -camera_offset.x) {
-            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){1,0});
-        }
-    } else if (CRIsTerminalInput('d')) {
-        movable->position.x += 1;
-        if (movable->position.x >= -camera_offset.x + size.x) {
-            CRShiftCameraOffset(CRGetMainCamera(), (Vector2){-1,0});
-        }
-    }
-#else
     if (IsKeyPressed(KEY_W)) {
         movable->position.y -= 1;
         if (movable->position.y < -camera_offset.y) {
@@ -75,7 +48,6 @@ void PreDraw() {
             CRShiftCameraOffset(CRGetMainCamera(), (Vector2){-1,0});
         }
     }
-#endif
 }
 
 int main() {
