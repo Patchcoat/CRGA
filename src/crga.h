@@ -16,20 +16,10 @@
 #ifndef CRGA_HEADER
 #define CRGA_HEADER
 
-#ifndef TERMINAL
-#define TERMINAL 0
-#endif
 
 #include <raylib.h>
 #include <stdint.h>
 #include <stdlib.h>
-#if TERMINAL
-#if _WIN32
-//#include <curses.h>
-#elif UNIX
-#include <ncurses.h>
-#endif
-#endif
 
 #define GRID_OUTLINE 1
 #define TRANSPARENT (Color){0,0,0,0}
@@ -247,16 +237,5 @@ void CRDrawUITileRectangle(Vector2 top_left, Vector2 bottom_right,
 // Window Information
 Vector2 CRCameraOffset();
 Vector2 CRScreenSize();
-
-// Terminal rendering
-#if TERMINAL
-void CRInitTerm();
-void CRStopTerm();
-void CRBeginTerminalCamera();
-void CREndTerminalCamera();
-int CRIsTerminalInput(int c);
-void CRTermDrawTile(CRTile *tile, Vector2 position, uint8_t mask);
-void CRCloseTerminal();
-#endif
 
 #endif

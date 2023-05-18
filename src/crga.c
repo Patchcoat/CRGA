@@ -17,7 +17,6 @@
  */
 #include "crga.h"
 #include "crgahelper.h"
-#include "termdraw.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -26,18 +25,6 @@ void (*CRWorldDraw)();
 void (*CRUIDraw)();
 void (*CRPreDraw)();
 void (*CRPostDraw)();
-
-#if TERMINAL
-int TerminalShouldClose();
-int camera_shift = 0;
-int terminal_should_close = 0;
-#if UNIX
-#include <ncurses.h>
-#elif _WIN32
-//#include <curses.h>
-#endif
-#endif
-
 
 // Init
 void CRInit() {
@@ -48,9 +35,6 @@ void CRInit() {
     CRInitWorld();
     CRInitUI();
     CRInitWindow();
-#if TERMINAL
-    CRInitTerm();
-#endif
 }
 void CRInitConfig(CRConfig *config) {
     config->window_width = 800;
@@ -204,6 +188,7 @@ void CRLoop() {
             EndMode2D();
 #endif
 
+            DrawFPS(0,0);
             for (int i = 0; i < cr_config->ui_layer_count; i++) {
                 CRDrawLayer(&cr_config->ui_layers[i]);
             }
@@ -235,7 +220,6 @@ void CRSetPostDraw(void (*new_func)()) {
 }
 
 // Font Loading
-//TODO handle fonts within terminal rendering
 inline void CRLoadFont(const char *font_path) {
     CRLoadFontSize(font_path, 96);
 }
@@ -258,7 +242,6 @@ void CRLoadFontSize(const char *font_path, int size) {
 }
 
 // Tilemap Loading
-// TODO handle tilemap loading within terminal rendering
 void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height) {
     if (cr_config->tilemap_count == 255) {
         // there are too many tiles, exit out
@@ -800,8 +783,13 @@ void CRShiftCameraTarget(Camera2D *camera, Vector2 target) {
     camera->target = target_out;
 }
 void CRShiftCameraOffset(Camera2D *camera, Vector2 offset) {
+#if TERMINAL
+    Vector2 offset_out = (Vector2) {camera->offset.x + offset.x, 
+        camera->offset.y + offset.y};
+#else
     Vector2 offset_out = (Vector2) {camera->offset.x + offset.x * cr_config->tile_size, 
         camera->offset.y + offset.y * cr_config->tile_size};
+#endif
     camera->offset = offset_out;
 }
 
@@ -909,7 +897,7 @@ Vector2 CRScreenSize() {
     Vector2 size;
 
 #if TERMINAL
-    size.x = COLUMNS;
+    size.x = COLS;
     size.y = LINES;
 #else
     size.x = GetRenderWidth() / cr_config->tile_size;
@@ -918,61 +906,3 @@ Vector2 CRScreenSize() {
 
     return size;
 }
-
-// Terminal rendering
-#if TERMINAL
-int close_terminal = 0;
-
-void CRInitTerm() {
-    initscr();
-    cbreak();
-    noecho();
-    nodelay(stdscr, TRUE);
-    curs_set(0);
-}
-
-void CRStopTerm() {
-    curs_set(1);
-    endwin();
-}
-
-void CRBeginTerminalCamera() {
-    camera_shift = 1;
-}
-void CREndTerminalCamera() {
-    camera_shift = 0;
-}
-
-int CRIsTerminalInput(int c) {
-    int ch = getch();
-    if (ch == c) {
-        return true;
-    } else if (ch == ERR) {
-        return false;
-    }
-    ungetch(ch);
-    return false;
-}
-
-void CRTermDrawTile(CRTile *tile, Vector2 position, uint8_t mask) {
-    if (tile->foreground.a == 0 && tile->background.a == 0)
-        return;
-    if (camera_shift) {
-        Camera2D *camera = CRGetMainCamera();
-        position.x += camera->target.x;
-        position.y += camera->target.y;
-        position.x += camera->offset.x;
-        position.y += camera->offset.y;
-    }
-    move(position.x, position.y);
-    addch(tile->index.c[0]);
-}
-
-void CRCloseTerminal() {
-    close_terminal = 1;
-}
-
-int TerminalShouldClose() {
-    return close_terminal ? 1 : 0;
-}
-#endif
