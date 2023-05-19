@@ -29,6 +29,9 @@ tasks.json
 *.lastbuildstate
 *.zip
 
+#vim
+*.vim
+
 # C
 crga
 

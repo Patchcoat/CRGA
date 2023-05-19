@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define GRID_OUTLINE 1
+#define GRID_OUTLINE 0
 #define TRANSPARENT (Color){0,0,0,0}
 #define MAXLAYERMASKS 16
 
