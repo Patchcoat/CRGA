@@ -74,7 +74,7 @@ typedef struct {
     size_t tile_index;
     int width;
     int height;
-    uint8_t flags;// bit 0: 0 char or 1 img | bit 1: if img, use 1 character mapping or 0 index directly
+    uint8_t flags; // CRLayerFlags
 } CRLayer;
 typedef struct {
     Texture2D texture;
@@ -89,7 +89,7 @@ typedef struct CRCharIndexAssoc{
 typedef enum {
     FLAG_LAYER_IMG = 0x1, // Display images (1) or characters (0)
     FLAG_LAYER_MAP = 0x2  // Use character mapping or use the index directly
-} CRLayerRenderFlags;
+} CRLayerFlags;
 typedef enum {
     FLAG_MASK_GRID = 0x1,    // Mask the grid, or don't mask the grid
     FLAG_MASK_ENTITIES = 0x2 // Mask entities, or don't mask entities

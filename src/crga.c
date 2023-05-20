@@ -225,7 +225,7 @@ inline void CRLoadFont(const char *font_path) {
 }
 void CRLoadFontSize(const char *font_path, int size) {
     if (cr_config->font_count == 255) {
-        printf("ERROR: Could not load font. Reached limit of 255.");
+        printf("ERROR: Could not load font. Reached limit of 255.\n");
         return;
     } else if (cr_config->font_count == 0) {
         cr_config->fonts = (Font *) malloc(sizeof(Font));
@@ -244,7 +244,7 @@ void CRLoadFontSize(const char *font_path, int size) {
 // Tilemap Loading
 void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height) {
     if (cr_config->tilemap_count == 255) {
-        printf("ERROR: Could not load tilemap. Reached limit of 255.");
+        printf("ERROR: Could not load tilemap. Reached limit of 255.\n");
         return;
     } else if (cr_config->tilemap_count == 0) {
         cr_config->tilemaps = (CRTilemap *) malloc(sizeof(CRTilemap));
@@ -304,13 +304,17 @@ CRLayer CRInitLayer() {
     return layer;
 }
 void CRSetWorldLayer(int index, CRLayer layer) {
-    if (cr_config->world_layer_count < index)
-        return;// TODO out of bounds error
+    if (cr_config->world_layer_count < index) {
+        printf("ERROR: Index %d for world layer out of bounds\n", index);
+        return;
+    }
     cr_config->world_layers[index] = layer;
 }
 void CRSetUILayer(int index, CRLayer layer) {
-    if (cr_config->ui_layer_count < index)
-        return;// TODO out of bounds error
+    if (cr_config->ui_layer_count < index) {
+        printf("ERROR: Index %d for UI layer out of bounds\n", index);
+        return;
+    }
     cr_config->ui_layers[index] = layer;
 }
 void CRNewWorldLayer() {
@@ -330,8 +334,10 @@ void CRNewUILayer() {
     }
 }
 void CRAddWorldLayer(int index, CRLayer layer) {
-    if (index > cr_config->world_layer_count)
-        return;// TODO out of bounds error
+    if (index > cr_config->world_layer_count) {
+        printf("ERROR: Index %d for world layer out of bounds\n", index);
+        return;
+    }
     if (index == cr_config->world_layer_count) {
         CRAppendWorldLayer(layer);
         return;
@@ -344,8 +350,10 @@ void CRAddWorldLayer(int index, CRLayer layer) {
     cr_config->world_layers[index] = layer;
 }
 void CRAddUILayer(int index, CRLayer layer) {
-    if (index > cr_config->ui_layer_count)
-        return;// TODO out of bounds error
+    if (index > cr_config->ui_layer_count) {
+        printf("ERROR: Index %d for world layer out of bounds\n", index);
+        return;
+    }
     if (index == cr_config->ui_layer_count) {
         CRAppendUILayer(layer);
         return;
@@ -411,14 +419,18 @@ size_t CRNewMask(int width, int height, uint8_t flags, Vector2 position) {
     return index;
 }
 void CRAddMaskToLayer(size_t mask_index, CRLayer *layer) {
-    if (layer->mask_count == MAXLAYERMASKS)
-        return; // TODO out of bounds exception
+    if (layer->mask_count == MAXLAYERMASKS) {
+        printf("ERROR: Too many mask layers\n");
+        return;
+    }
     layer->mask_indexes[layer->mask_count] = mask_index;
     layer->mask_count++;
 }
 void CRSetWorldMask(Vector2 position, uint8_t mask_value) {
-    if (cr_config->world_layer_count == 0)
-        return; // TODO no world layer found
+    if (cr_config->world_layer_count == 0) {
+        printf("ERROR: Cannot mask when there are no world layers\n");
+        return;
+    }
     CRLayer *layer = &cr_config->world_layers[0];
     if (layer->mask_count == 0) {
         size_t new_mask = CRNewMask(layer->width, layer->height, 0b11, layer->position);
@@ -429,8 +441,10 @@ void CRSetWorldMask(Vector2 position, uint8_t mask_value) {
     mask->grid[mask_position] = mask_value;
 }
 void CRSetUIMask(Vector2 position, uint8_t mask_value) {
-    if (cr_config->ui_layer_count == 0)
-        return; // TODO no ui layer found
+    if (cr_config->ui_layer_count == 0) {
+        printf("ERROR: Cannot mask when there are no world layers\n");
+        return;
+    }
     CRLayer *layer = &cr_config->ui_layers[0];
     if (layer->mask_count == 0) {
         size_t new_mask = CRNewMask(layer->width, layer->height, 0b11, layer->position);
@@ -482,14 +496,18 @@ CREntity CRNewEntity(CRTile tile, Vector2 position) {
     return entity;
 }
 void CRAddEntity(CREntity *entity) {
-    if (cr_config->world_layer_count == 0)
-        return;// TODO layer doesn't exist to write to
+    if (cr_config->world_layer_count == 0) {
+        printf("ERROR: Cannot add entity when world layer doesn't exist\n");
+        return;
+    }
     CRAddEntityToLayer(0, entity);
 }
 void CRAddEntityToLayer(CRLayer *layer, CREntity *entity) {
     if (layer == 0) {
-        if (cr_config->world_layer_count == 0)
+        if (cr_config->world_layer_count == 0) {
+            printf("ERROR: No world layer to add entity to\n");
             return;
+        }
         layer = &cr_config->world_layers[0];
     }
     // Remove entity from its current position
@@ -542,8 +560,8 @@ void CRSetGridTile(CRTile *grid, CRTile tile, Vector2 position, int width, int h
     int x = position.x;
     int y = position.y;
     if (x > width || y > height) {
-        printf("Error: Tile position (%d, %d) out of bounds", x, y);
-        return; // TODO return out of bounds error
+        printf("Error: Tile position (%d, %d) out of bounds\n", x, y);
+        return;
     }
     grid[x + y * width] = tile;
 }
@@ -583,13 +601,17 @@ void CRSetUITileChar(char *character, Vector2 position) {
     CRSetLayerTile(&cr_config->ui_layers[0], tile, position);
 }
 void CRSetWorldLayerTile(int index, CRTile tile, Vector2 position) {
-    if (cr_config->world_layer_count < index)
-        return; // TODO return out of bounds error
+    if (cr_config->world_layer_count < index) {
+        printf("ERROR: Index %d for world layer out of bounds\n", index);
+        return;
+    }
     CRSetLayerTile(cr_config->world_layers + index, tile, position);
 }
 void CRSetUILayerTile(int index, CRTile tile, Vector2 position) {
-    if (cr_config->ui_layer_count < index)
-        return; // TODO return out of bounds error
+    if (cr_config->ui_layer_count < index) {
+        printf("ERROR: Index %d for UI layer out of bounds\n", index);
+        return;
+    }
     CRSetLayerTile(cr_config->world_layers + index, tile, position);
 }
 
