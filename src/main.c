@@ -56,7 +56,7 @@ int main() {
     CRSetPreDraw(&PreDraw);
 
     // Load font/tilemap
-    //CRLoadTilemap("resources/tilemap.png", 8, 8);
+    CRLoadTilemap("resources/tilemap.png", 8, 8);
     //CRLoadFont("resources/dejavu-sans.book.ttf");
 
     // Set base world tiles
@@ -72,10 +72,11 @@ int main() {
     CRSetWorldTileChar("E", (Vector2) {3,3});
     CRSetWorldTileChar("B", (Vector2) {1,3});
     CRSetWorldTileChar("T", (Vector2) {2,3});
+    CRSetWorldTileChar("T", (Vector2) {-1, -1});
     //CRSetWorldMask((Vector2) {1,0}, 100);
 
     // Use tilemap
-    CRSetWorldFlags(0b10);
+    CRSetWorldFlags(0b01);
     // Associate character with tile index
     CRSetCharAssoc("A", 1);
     CRSetCharAssoc("B", 2);
@@ -85,19 +86,20 @@ int main() {
     CRSetCharAssoc("E", 36);
     CRSetCharAssoc("b", 17);
     CRSetCharAssoc("M", 200);
+    CRSetCharAssoc("00", 16);
     CRSetCharAssoc("c", 20);
     CRSetCharAssoc("@", 5);
 
     CRDrawUICharRectangle((Vector2){10,10}, (Vector2){20,20}, "+", "=", "+", "|", "+", "=", "+", "|", " ");
 
     // Create a new world layer
-    //CRLayer layer = CRInitLayer();
-    //CRSetLayerTileChar(&layer, "C", (Vector2){1, 1});
-    //CRSetLayerTileChar(&layer, "C", (Vector2){2, 2});
-    //CRSetLayerTileChar(&layer, "C", (Vector2){1, 2});
-    //CRSetLayerTileChar(&layer, "C", (Vector2){2, 1});
-    //CRAddWorldLayer(1, layer);
-    //CRSetLayerFlags(&layer, 0b00);
+    CRLayer layer = CRInitLayer();
+    CRSetLayerTileChar(&layer, "C", (Vector2){1, 1});
+    CRSetLayerTileChar(&layer, "C", (Vector2){2, 2});
+    CRSetLayerTileChar(&layer, "C", (Vector2){1, 2});
+    CRSetLayerTileChar(&layer, "C", (Vector2){2, 1});
+    CRAddWorldLayer(1, layer);
+    CRSetLayerFlags(&layer, 0b00);
 
     // Create player entity
     CREntity player = CRNewEntity(CRCTile("@"), (Vector2) {5, 5});

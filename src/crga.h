@@ -88,7 +88,6 @@ typedef struct {
 typedef struct CRCharIndexAssoc{
     char character[4];
     int index;
-    struct CRCharIndexAssoc *next;
 } CRCharIndexAssoc;
 
 typedef struct {
@@ -118,9 +117,7 @@ typedef struct {
 
     Color background_color;
 
-    CRCharIndexAssoc char_index_assoc[255];
-    CRCharIndexAssoc *assocs;
-    size_t assoc_count;
+    CRCharIndexAssoc char_index_assoc[1024];
 
     Font *fonts;
     size_t font_count;
@@ -135,14 +132,24 @@ void CRInitConfig(CRConfig *config);
 void CRSetConfig(CRConfig *config);
 void CRInitCharIndexAssoc();
 void CRInitWindow();
+void CRInitWindowFlags(unsigned int flags);
+void CRInitWindowFullscreen();
+void CRInitWindowed();
+void CRInitBorderlessWindowed();
 
 // Cleanup Functions
 void CRClose();
 void CRUnloadLayers();
 void CRUnloadFonts();
-void CRUnloadCharIndexAssoc();
 void CRUnloadTilemaps();
 void CRUnloadMasks();
+
+// Window
+void CRToggleFullscreen();
+void CRMaximize();
+void CRMinimize();
+void CRSetWindowed();
+void CRSetBorderlessWindowed();
 
 // Loop
 void CRLoop();
@@ -152,12 +159,12 @@ void CRSetPreDraw(void (*newFunc)());
 void CRSetPostDraw(void (*newFunc)());
 
 // Font Loading
-void CRLoadFont(const char *font_path);
+void CRLoadFont(const char *font_path);// malloc, realloc
 void CRLoadFontSize(const char *font_path, int size);// malloc, realloc
 
 // Tilemap Loading
 void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height);// malloc
-void CRSetCharAssoc(char *character, int index);// malloc, realloc
+void CRSetCharAssoc(char *character, int index);
 
 // Configuration
 void CRTileImage();

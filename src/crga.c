@@ -63,9 +63,6 @@ void CRInitConfig(CRConfig *config) {
 
     config->background_color = BLACK;
 
-    config->assocs = 0;
-    config->assoc_count = 0;
-
     config->fonts = 0;
     config->font_count = 0;
 
@@ -76,31 +73,45 @@ inline void CRSetConfig(CRConfig *config) {
     cr_config = config;
 }
 inline void CRInitCharIndexAssoc() {
-    for (int i = 0; i < 255; i++) {
+    for (int i = 0; i < 1024; i++) {
         int index = i;
         // set the character string to the ASCII value followed by three null terminators
         cr_config->char_index_assoc[i].character[0] = (uint32_t) 0;
         cr_config->char_index_assoc[i].character[0] = (char) i;
-        // Shift all all ASCII control codes to the end
+        // Shift all ASCII control codes to the end
         index = (i > 0 && i < 32) ? i + 96 : index;
         // shift all (non extended ascii) characters to the front
         index = (i >= 32 && i <= 127) ? i - 31 : index;
         // extended ascii character number matches it's index
         cr_config->char_index_assoc[i].index = index;
-        // set the linked list next to the null ptr
-        cr_config->char_index_assoc[i].next = 0;
     }
 }
 inline void CRInitWindow() {
     InitWindow(cr_config->window_width, cr_config->window_height, cr_config->title);
     SetTargetFPS(cr_config->fps);
 }
+inline void CRInitWindowFlags(unsigned int flags) {
+    InitWindow(cr_config->window_width, cr_config->window_height, cr_config->title);
+    SetWindowState(flags);
+    SetTargetFPS(cr_config->fps);
+}
+inline void CRInitWindowFullscreen() { 
+    CRInitWindow();
+    CRToggleFullscreen();
+}
+inline void CRInitWindowed() {
+    unsigned int flags = FLAG_WINDOW_RESIZABLE;
+    CRInitWindowFlags(flags);
+}
+inline void CRInitBorderlessWindowed() {
+    unsigned int flags = FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST;
+    CRInitWindowFlags(flags);
+}
 
 // Cleanup Functions
 void CRClose() {
     CRUnloadFonts();
     CRUnloadTilemaps();
-    CRUnloadCharIndexAssoc();
     CRUnloadLayers();
     CRUnloadMasks();
     CloseWindow();
@@ -127,11 +138,6 @@ inline void CRUnloadFonts() {
     }
     free(cr_config->fonts);
 }
-inline void CRUnloadCharIndexAssoc() {
-    if (cr_config->assoc_count == 0)
-        return;
-    free(cr_config->assocs);
-}
 inline void CRUnloadTilemaps() {
     free(cr_config->tilemaps);
 }
@@ -141,6 +147,31 @@ void CRUnloadMasks() {
     for (int i = 0; i < cr_config->mask_count; i++)
         free(cr_config->masks[i].grid);
     free(cr_config->masks);
+}
+
+// Window
+void CRToggleFullscreen() {
+    if (IsWindowFullscreen()) {
+        int monitor = GetCurrentMonitor();
+        SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+    } else {
+        SetWindowSize(cr_config->window_width, cr_config->window_height);
+    }
+    ToggleFullscreen();
+}
+void CRMaximize() {
+    MaximizeWindow();
+}
+void CRMinimize() {
+    MinimizeWindow();
+}
+void CRSetWindowed() {
+    unsigned int flags = FLAG_WINDOW_RESIZABLE;
+    SetWindowState(flags);
+}
+void CRSetBorderlessWindowed() {
+    unsigned int flags = FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST;
+    SetWindowState(flags);
 }
 
 // Loop
@@ -164,7 +195,6 @@ void CRLoop() {
                     (*CRWorldDraw)();
             EndMode2D();
 
-            DrawFPS(0,0);
             for (int i = 0; i < cr_config->ui_layer_count; i++) {
                 CRDrawLayer(&cr_config->ui_layers[i]);
             }
@@ -195,7 +225,7 @@ inline void CRLoadFont(const char *font_path) {
 }
 void CRLoadFontSize(const char *font_path, int size) {
     if (cr_config->font_count == 255) {
-        // there are too many fonts, exit out
+        printf("ERROR: Could not load font. Reached limit of 255.");
         return;
     } else if (cr_config->font_count == 0) {
         cr_config->fonts = (Font *) malloc(sizeof(Font));
@@ -214,7 +244,7 @@ void CRLoadFontSize(const char *font_path, int size) {
 // Tilemap Loading
 void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height) {
     if (cr_config->tilemap_count == 255) {
-        // there are too many tiles, exit out
+        printf("ERROR: Could not load tilemap. Reached limit of 255.");
         return;
     } else if (cr_config->tilemap_count == 0) {
         cr_config->tilemaps = (CRTilemap *) malloc(sizeof(CRTilemap));
@@ -235,37 +265,13 @@ void CRLoadTilemap(const char *tilemap_path, int tile_width, int tile_height) {
     cr_config->tilemaps[index].tile_count = count;
 }
 void CRSetCharAssoc(char* character, int index) {
+    CRCharIndexAssoc new_assoc;
     // Convert string to index
-    int assoc_index = character[0];
-    // use index to access value in array
-    CRCharIndexAssoc *assoc = &cr_config->char_index_assoc[assoc_index];
-    do {
-        // if the current value is the character we're looking for, replace it
-        if (cmpstr(assoc->character, character, 4)) {
-            assoc->index = index;
-            return;
-        }
-        // otherwise, move on to the next 
-        assoc = assoc->next;
-    } while(assoc != 0);
-    // if it doesn't exist, add add a new association
-    size_t assoc_count = cr_config->assoc_count;
-    if  (assoc_count == 0)
-        cr_config->assocs = malloc(sizeof(CRCharIndexAssoc));
-    else
-        cr_config->assocs = realloc(cr_config->assocs, 
-                sizeof(CRCharIndexAssoc) * (assoc_count + 1));
-    CRCharIndexAssoc *new_assoc = &cr_config->assocs[assoc_count];
-    // copy character over
-    for (int i = 0; i < 4; i++)
-        new_assoc->character[i] = character[i];
-    // assign index
-    new_assoc->index = index;
+    int assoc_index = UTF8CharToInt(character);
+    memcpy(&new_assoc.character, character, 4);
+    new_assoc.index = index;
     // insert new_assoc
-    new_assoc->next = cr_config->char_index_assoc[assoc_index].next;
-    cr_config->char_index_assoc[assoc_index].next = new_assoc;
-    // increment the counter
-    cr_config->assoc_count++;
+    cr_config->char_index_assoc[assoc_index] = new_assoc;
 }
 
 // Layers
@@ -535,8 +541,10 @@ CRTile CRITile(int index) {
 void CRSetGridTile(CRTile *grid, CRTile tile, Vector2 position, int width, int height) {
     int x = position.x;
     int y = position.y;
-    if (x > width || y > height)
+    if (x > width || y > height) {
+        printf("Error: Tile position (%d, %d) out of bounds", x, y);
         return; // TODO return out of bounds error
+    }
     grid[x + y * width] = tile;
 }
 void CRSetLayerTile(CRLayer *layer, CRTile tile, Vector2 position) {
@@ -587,21 +595,8 @@ void CRSetUILayerTile(int index, CRTile tile, Vector2 position) {
 
 // Draw Tiles
 int CRCharToIndex(char *character) {
-    // Convert string to index
-    int assoc_index = character[0];
-    // use index to access value in array
-    CRCharIndexAssoc *assoc = &cr_config->char_index_assoc[assoc_index];
-    do {
-        // if the current value is the character we're looking for, replace it
-        if (cmpstr(assoc->character, character, 4)) {
-            break;
-        }
-        // otherwise, move on to the next 
-        assoc = assoc->next;
-    } while(assoc != 0);
-    if (assoc == 0)
-        return 0;
-    return assoc->index;
+    int assoc_index = UTF8CharToInt(character);
+    return cr_config->char_index_assoc[assoc_index].index;
 }
 int PreDrawTile(CRTileIndex index, uint8_t mask, Color *foreground_color, Color *background_color, char string_out[5]) {
     if (index.i == 0)

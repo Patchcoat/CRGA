@@ -214,4 +214,15 @@ Vector2 CenterTextEx(Vector2 position, Font font, float tile_size, char *string_
     return position;
 }
 
+int UTF8CharToInt(char *character) {
+    int out = 0;
+    int i = 0;
+    while (i < 4 && character[i] == 0) {
+        int c = character[i] << (sizeof(char) * 8 * i);
+        out += c;
+        i++;
+    }
+    return out;
+}
+
 #endif
