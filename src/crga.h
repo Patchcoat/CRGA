@@ -63,10 +63,7 @@ typedef struct {
     Vector2 position;
     int width;
     int height;
-    // flags for the behavior of the map. 
-    // 0 bit: 1 mask grid, 0 don't mask grid. 
-    // 1 bit: 1 mask entities, 0 don't mask entities.
-    uint8_t flags;
+    uint8_t flags; // CRMaskFlags
 } CRMask;
 typedef struct {
     CRTile *grid;
@@ -89,6 +86,14 @@ typedef struct CRCharIndexAssoc{
     char character[4];
     int index;
 } CRCharIndexAssoc;
+typedef enum {
+    FLAG_LAYER_IMG = 0x1, // Display images (1) or characters (0)
+    FLAG_LAYER_MAP = 0x2  // Use character mapping or use the index directly
+} CRLayerRenderFlags;
+typedef enum {
+    FLAG_MASK_GRID = 0x1,    // Mask the grid, or don't mask the grid
+    FLAG_MASK_ENTITIES = 0x2 // Mask entities, or don't mask entities
+} CRMaskFlags;
 
 typedef struct {
     int window_width;
@@ -184,9 +189,9 @@ void CRAppendWorldLayer(CRLayer layer);// malloc, realloc
 void CRAppendUILayer(CRLayer layer);// malloc, realloc
 void CRInitWorld();
 void CRInitUI();
-void CRSetLayerFlags(CRLayer *layer, int flags);
-void CRSetWorldFlags(int flags);
-void CRSetUIFlags(int flags);
+void CRSetLayerFlags(CRLayer *layer, unsigned int flags);
+void CRSetWorldFlags(unsigned int flags);
+void CRSetUIFlags(unsigned int flags);
 
 // Mask
 size_t CRNewMask(int width, int height, uint8_t flags, Vector2 position);// malloc, realloc

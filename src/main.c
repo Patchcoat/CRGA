@@ -76,7 +76,7 @@ int main() {
     //CRSetWorldMask((Vector2) {1,0}, 100);
 
     // Use tilemap
-    CRSetWorldFlags(0b01);
+    CRSetWorldFlags(FLAG_LAYER_IMG);
     // Associate character with tile index
     CRSetCharAssoc("A", 1);
     CRSetCharAssoc("B", 2);
@@ -99,7 +99,7 @@ int main() {
     CRSetLayerTileChar(&layer, "C", (Vector2){1, 2});
     CRSetLayerTileChar(&layer, "C", (Vector2){2, 1});
     CRAddWorldLayer(1, layer);
-    CRSetLayerFlags(&layer, 0b00);
+    CRSetLayerFlags(&layer, 0);
 
     // Create player entity
     CREntity player = CRNewEntity(CRCTile("@"), (Vector2) {5, 5});

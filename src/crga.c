@@ -381,13 +381,13 @@ void CRInitUI() {
     CRInitGrid(&layer);
     CRAppendUILayer(layer);
 }
-void CRSetLayerFlags(CRLayer *layer, int flags) {
+void CRSetLayerFlags(CRLayer *layer, unsigned int flags) {
     layer->flags = flags;
 }
-void CRSetWorldFlags(int flags) {
+void CRSetWorldFlags(unsigned int flags) {
     cr_config->world_layers[0].flags = flags;
 }
-void CRSetUIFlags(int flags) {
+void CRSetUIFlags(unsigned int flags) {
     cr_config->ui_layers[0].flags = flags;
 }
 
