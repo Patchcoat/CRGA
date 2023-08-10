@@ -118,6 +118,9 @@ typedef struct {
     CRMask *masks;
     size_t mask_count;
 
+    Shader *shaders;
+    size_t shader_count;
+
     Camera2D main_camera;
 
     Color background_color;
@@ -148,6 +151,7 @@ void CRUnloadLayers();
 void CRUnloadFonts();
 void CRUnloadTilemaps();
 void CRUnloadMasks();
+void CRUnloadShaders();
 
 // Window
 void CRToggleFullscreen();
@@ -228,6 +232,11 @@ void CRDrawTile(CRTile *tile, uint8_t tilemap_flags, size_t index, float tile_si
 void CRDrawTileChar(CRTile *tile, Font *font, float tile_size, Vector2 position, uint8_t mask);
 void CRDrawTileImage(CRTile *tile, CRTilemap *tilemap, int char_index, float tile_size, Vector2 position, uint8_t mask);
 void CRDrawLayer(CRLayer *layer);
+
+// Shaders
+size_t CRNewShader(const char *vsCode, const char *fsCode); // malloc and realloc
+size_t CRNewVertexShader(const char *vsCode);
+size_t CRNewFragmentShader(const char *fsCode);
 
 // Camera functions
 Camera2D *CRGetMainCamera();

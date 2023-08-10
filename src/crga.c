@@ -56,6 +56,9 @@ void CRInitConfig(CRConfig *config) {
     config->ui_layers = 0;
     config->ui_layer_count = 0;
 
+    config->shaders = 0;
+    config->shader_count = 0;
+
     config->main_camera.target = (Vector2){0.0f, 0.0f};
     config->main_camera.offset = (Vector2){0.0f, 0.0f};
     config->main_camera.rotation = 0.0f;
@@ -114,6 +117,7 @@ void CRClose() {
     CRUnloadTilemaps();
     CRUnloadLayers();
     CRUnloadMasks();
+    CRUnloadShaders();
     CloseWindow();
 }
 void CRUnloadLayers() {
@@ -147,6 +151,14 @@ void CRUnloadMasks() {
     for (int i = 0; i < cr_config->mask_count; i++)
         free(cr_config->masks[i].grid);
     free(cr_config->masks);
+}
+void CRUnloadShaders() {
+    if (cr_config->shader_count == 0)
+        return;
+    for (int i = 0; i < cr_config->shader_count; i++) {
+        UnloadShader(cr_config->shaders[i]);
+    }
+    free(cr_config->shaders);
 }
 
 // Window
@@ -732,6 +744,27 @@ void CRDrawLayer(CRLayer *layer) {
         CRDrawTile(tile, layer->flags, layer->tile_index, tile_size, position, mask);
         itr = itr->next;
     }
+}
+
+// Shaders
+size_t CRNewShader(const char *vsCode, const char *fsCode) {
+    int shader_count = cr_config->shader_count;
+    if (shader_count == 0) {
+        cr_config->shaders = malloc(sizeof(Shader));
+    } else {
+        cr_config->shaders = realloc(cr_config->shaders, sizeof(Shader) * (shader_count + 1));
+    }
+    cr_config->shaders[shader_count] = LoadShader(vsCode, fsCode);
+    cr_config->shader_count++;
+    return 0;
+}
+size_t CRNewVertexShader(const char *vsCode) {
+    CRNewShader(vsCode, 0);
+    return 0;
+}
+size_t CRNewFragmentShader(const char *fsCode) {
+    CRNewShader(0, fsCode);
+    return 0;
 }
 
 // Camera functions
