@@ -32,6 +32,9 @@ tasks.json
 #vim
 *.vim
 
+# crga
+build/*
+
 # C
 crga
 
